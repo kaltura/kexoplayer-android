@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -exu
 
 VERSION="$1"
 
@@ -12,11 +12,10 @@ mkdir "$WORK_DIR"
 cd "$WORK_DIR"
 
 ## Step 1: Download ExoPlayer
-curl -L https://github.com/google/ExoPlayer/archive/r$VERSION.tar.gz > exo.tgz
-tar -xzf exo.tgz
+curl -L https://github.com/google/ExoPlayer/archive/r$VERSION.tar.gz | tar -xz
 
 ## Step 2: Prepare the sources
-$MYDIR/prepare.sh ExoPlayer-r$VERSION dist
+$MYDIR/prepare.sh "ExoPlayer-r$VERSION" dist
 	
 ## Step 3: Build
 cd dist
@@ -25,3 +24,7 @@ cd dist
 ## Step 4: Push to Bintray
 ./gradlew bintrayUpload -PbintrayUser=$BINTRAY_USER -PbintrayKey=$BINTRAY_KEY -PdryRun=false
 	
+cd "$MYDIR"
+
+mv "$WORK_DIR/dist" .
+rm -rf "$WORK_DIR"
