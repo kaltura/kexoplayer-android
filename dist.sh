@@ -24,7 +24,3 @@ cd dist
 ## Step 4: Push to Bintray
 ./gradlew bintrayUpload -PbintrayUser=$BINTRAY_USER -PbintrayKey=$BINTRAY_KEY -PdryRun=false
 	
-cd "$MYDIR"
-
-mv "$WORK_DIR/dist" .
-rm -rf "$WORK_DIR"
