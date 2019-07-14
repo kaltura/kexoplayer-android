@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -exu
 
 INPUT_DIR="$1"
 OUTPUT_DIR="$2"
@@ -28,9 +28,10 @@ cp -R "$INPUT_DIR/library/ui/src/main/java/com/google/android/exoplayer2/ui" "$O
 cp -R "$INPUT_DIR/library/ui/src/main/res" "$OUTPUT_DIR/lib/src/main"
 
 # OkHttp extension
-cp -R "$INPUT_DIR/extensions/okhttp/src/main/java/com/google/android/exoplayer2/ext/okhttp" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2"
+mkdir "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2/ext"
+cp -R "$INPUT_DIR/extensions/okhttp/src/main/java/com/google/android/exoplayer2/ext/okhttp" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2/ext"
 
-# Find and replace in source code
+# Find com.google.android.exoplayer2 in source code and replace to com.kaltura.android.exoplayer2
 find "$OUTPUT_DIR/lib/src/main" -type f \( -name "*.gradle" -o  -name "*.md" -o -name "*.xml" -o -name "*.txt" -o -name "*.json" -o -name "*.java" \) -exec sed -i '' 's/com.google.android.exoplayer2/com.kaltura.android.exoplayer2/' {} \;
 
 # Add R import to UI source files
