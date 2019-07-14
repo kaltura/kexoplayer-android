@@ -16,7 +16,7 @@
 
 package com.kaltura.android.exoplayer2.extractor;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.metadata.Metadata;
 import com.kaltura.android.exoplayer2.metadata.id3.Id3Decoder;
 import com.kaltura.android.exoplayer2.util.ParsableByteArray;

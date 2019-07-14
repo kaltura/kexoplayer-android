@@ -16,7 +16,7 @@
 package com.kaltura.android.exoplayer2.util;
 
 import android.os.Looper;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import com.kaltura.android.exoplayer2.ExoPlayerLibraryInfo;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNull;

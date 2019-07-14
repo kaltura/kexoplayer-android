@@ -16,8 +16,8 @@
 package com.kaltura.android.exoplayer2.source;
 
 import android.os.Handler;
-import androidx.annotation.CallSuper;
-import androidx.annotation.Nullable;
+import android.support.annotation.CallSuper;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.Timeline;
 import com.kaltura.android.exoplayer2.upstream.TransferListener;
 import com.kaltura.android.exoplayer2.util.Assertions;

@@ -16,8 +16,8 @@
 package com.kaltura.android.exoplayer2.upstream.cache;
 
 import android.net.Uri;
-import androidx.annotation.IntDef;
-import androidx.annotation.Nullable;
+import android.support.annotation.IntDef;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.upstream.DataSink;
 import com.kaltura.android.exoplayer2.upstream.DataSource;
@@ -42,13 +42,24 @@ import java.util.Map;
  * A {@link DataSource} that reads and writes a {@link Cache}. Requests are fulfilled from the cache
  * when possible. When data is not cached it is requested from an upstream {@link DataSource} and
  * written into the cache.
+ *
+ * <p>By default requests whose length can not be resolved are not cached. This is to prevent
+ * caching of progressive live streams, which should usually not be cached. Caching of this kind of
+ * requests can be enabled per request with {@link DataSpec#FLAG_ALLOW_CACHING_UNKNOWN_LENGTH}.
  */
 public final class CacheDataSource implements DataSource {
 
   /**
-   * Flags controlling the CacheDataSource's behavior. Possible flag values are {@link
-   * #FLAG_BLOCK_ON_CACHE}, {@link #FLAG_IGNORE_CACHE_ON_ERROR} and {@link
-   * #FLAG_IGNORE_CACHE_FOR_UNSET_LENGTH_REQUESTS}.
+   * Default maximum single cache file size.
+   *
+   * @see #CacheDataSource(Cache, DataSource, int)
+   * @see #CacheDataSource(Cache, DataSource, int, long)
+   */
+  public static final long DEFAULT_MAX_CACHE_FILE_SIZE = 2 * 1024 * 1024;
+
+  /**
+   * Flags controlling the cache's behavior. Possible flag values are {@link #FLAG_BLOCK_ON_CACHE},
+   * {@link #FLAG_IGNORE_CACHE_ON_ERROR} and {@link #FLAG_IGNORE_CACHE_FOR_UNSET_LENGTH_REQUESTS}.
    */
   @Documented
   @Retention(RetentionPolicy.SOURCE)
@@ -134,9 +145,9 @@ public final class CacheDataSource implements DataSource {
 
   private @Nullable DataSource currentDataSource;
   private boolean currentDataSpecLengthUnset;
-  @Nullable private Uri uri;
-  @Nullable private Uri actualUri;
-  @HttpMethod private int httpMethod;
+  private @Nullable Uri uri;
+  private @Nullable Uri actualUri;
+  private @HttpMethod int httpMethod;
   private int flags;
   private @Nullable String key;
   private long readPosition;
@@ -155,7 +166,7 @@ public final class CacheDataSource implements DataSource {
    * @param upstream A {@link DataSource} for reading data not in the cache.
    */
   public CacheDataSource(Cache cache, DataSource upstream) {
-    this(cache, upstream, /* flags= */ 0);
+    this(cache, upstream, 0, DEFAULT_MAX_CACHE_FILE_SIZE);
   }
 
   /**
@@ -168,11 +179,29 @@ public final class CacheDataSource implements DataSource {
    *     and {@link #FLAG_IGNORE_CACHE_FOR_UNSET_LENGTH_REQUESTS}, or 0.
    */
   public CacheDataSource(Cache cache, DataSource upstream, @Flags int flags) {
+    this(cache, upstream, flags, DEFAULT_MAX_CACHE_FILE_SIZE);
+  }
+
+  /**
+   * Constructs an instance with default {@link DataSource} and {@link DataSink} instances for
+   * reading and writing the cache. The sink is configured to fragment data such that no single
+   * cache file is greater than maxCacheFileSize bytes.
+   *
+   * @param cache The cache.
+   * @param upstream A {@link DataSource} for reading data not in the cache.
+   * @param flags A combination of {@link #FLAG_BLOCK_ON_CACHE}, {@link #FLAG_IGNORE_CACHE_ON_ERROR}
+   *     and {@link #FLAG_IGNORE_CACHE_FOR_UNSET_LENGTH_REQUESTS}, or 0.
+   * @param maxCacheFileSize The maximum size of a cache file, in bytes. If the cached data size
+   *     exceeds this value, then the data will be fragmented into multiple cache files. The
+   *     finer-grained this is the finer-grained the eviction policy can be.
+   */
+  public CacheDataSource(Cache cache, DataSource upstream, @Flags int flags,
+      long maxCacheFileSize) {
     this(
         cache,
         upstream,
         new FileDataSource(),
-        new CacheDataSink(cache, CacheDataSink.DEFAULT_FRAGMENT_SIZE),
+        new CacheDataSink(cache, maxCacheFileSize),
         flags,
         /* eventListener= */ null);
   }
@@ -191,13 +220,8 @@ public final class CacheDataSource implements DataSource {
    *     and {@link #FLAG_IGNORE_CACHE_FOR_UNSET_LENGTH_REQUESTS}, or 0.
    * @param eventListener An optional {@link EventListener} to receive events.
    */
-  public CacheDataSource(
-      Cache cache,
-      DataSource upstream,
-      DataSource cacheReadDataSource,
-      @Nullable DataSink cacheWriteDataSink,
-      @Flags int flags,
-      @Nullable EventListener eventListener) {
+  public CacheDataSource(Cache cache, DataSource upstream, DataSource cacheReadDataSource,
+      DataSink cacheWriteDataSink, @Flags int flags, @Nullable EventListener eventListener) {
     this(
         cache,
         upstream,
@@ -227,7 +251,7 @@ public final class CacheDataSource implements DataSource {
       Cache cache,
       DataSource upstream,
       DataSource cacheReadDataSource,
-      @Nullable DataSink cacheWriteDataSink,
+      DataSink cacheWriteDataSink,
       @Flags int flags,
       @Nullable EventListener eventListener,
       @Nullable CacheKeyFactory cacheKeyFactory) {
@@ -273,7 +297,7 @@ public final class CacheDataSource implements DataSource {
       if (dataSpec.length != C.LENGTH_UNSET || currentRequestIgnoresCache) {
         bytesRemaining = dataSpec.length;
       } else {
-        bytesRemaining = ContentMetadata.getContentLength(cache.getContentMetadata(key));
+        bytesRemaining = cache.getContentLength(key);
         if (bytesRemaining != C.LENGTH_UNSET) {
           bytesRemaining -= dataSpec.position;
           if (bytesRemaining <= 0) {
@@ -319,7 +343,7 @@ public final class CacheDataSource implements DataSource {
       }
       return bytesRead;
     } catch (IOException e) {
-      if (currentDataSpecLengthUnset && CacheUtil.isCausedByPositionOutOfRange(e)) {
+      if (currentDataSpecLengthUnset && isCausedByPositionOutOfRange(e)) {
         setNoBytesRemainingAndMaybeStoreLength();
         return C.RESULT_END_OF_INPUT;
       }
@@ -458,12 +482,16 @@ public final class CacheDataSource implements DataSource {
     ContentMetadataMutations mutations = new ContentMetadataMutations();
     if (currentDataSpecLengthUnset && resolvedLength != C.LENGTH_UNSET) {
       bytesRemaining = resolvedLength;
-      ContentMetadataMutations.setContentLength(mutations, readPosition + bytesRemaining);
+      ContentMetadataInternal.setContentLength(mutations, readPosition + bytesRemaining);
     }
     if (isReadingFromUpstream()) {
       actualUri = currentDataSource.getUri();
       boolean isRedirected = !uri.equals(actualUri);
-      ContentMetadataMutations.setRedirectedUri(mutations, isRedirected ? actualUri : null);
+      if (isRedirected) {
+        ContentMetadataInternal.setRedirectedUri(mutations, actualUri);
+      } else {
+        ContentMetadataInternal.removeRedirectedUri(mutations);
+      }
     }
     if (isWritingToCache()) {
       cache.applyContentMetadataMutations(key, mutations);
@@ -473,15 +501,28 @@ public final class CacheDataSource implements DataSource {
   private void setNoBytesRemainingAndMaybeStoreLength() throws IOException {
     bytesRemaining = 0;
     if (isWritingToCache()) {
-      ContentMetadataMutations mutations = new ContentMetadataMutations();
-      ContentMetadataMutations.setContentLength(mutations, readPosition);
-      cache.applyContentMetadataMutations(key, mutations);
+      cache.setContentLength(key, readPosition);
     }
   }
 
   private static Uri getRedirectedUriOrDefault(Cache cache, String key, Uri defaultUri) {
-    Uri redirectedUri = ContentMetadata.getRedirectedUri(cache.getContentMetadata(key));
-    return redirectedUri != null ? redirectedUri : defaultUri;
+    ContentMetadata contentMetadata = cache.getContentMetadata(key);
+    Uri redirectedUri = ContentMetadataInternal.getRedirectedUri(contentMetadata);
+    return redirectedUri == null ? defaultUri : redirectedUri;
+  }
+
+  private static boolean isCausedByPositionOutOfRange(IOException e) {
+    Throwable cause = e;
+    while (cause != null) {
+      if (cause instanceof DataSourceException) {
+        int reason = ((DataSourceException) cause).reason;
+        if (reason == DataSourceException.POSITION_OUT_OF_RANGE) {
+          return true;
+        }
+      }
+      cause = cause.getCause();
+    }
+    return false;
   }
 
   private boolean isReadingFromUpstream() {

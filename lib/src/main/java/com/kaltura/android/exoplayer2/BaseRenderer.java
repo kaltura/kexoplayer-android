@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.decoder.DecoderInputBuffer;
 import com.kaltura.android.exoplayer2.drm.DrmInitData;
 import com.kaltura.android.exoplayer2.drm.DrmSessionManager;
@@ -37,7 +37,7 @@ public abstract class BaseRenderer implements Renderer, RendererCapabilities {
   private SampleStream stream;
   private Format[] streamFormats;
   private long streamOffsetUs;
-  private long readingPositionUs;
+  private boolean readEndOfStream;
   private boolean streamIsFinal;
 
   /**
@@ -46,7 +46,7 @@ public abstract class BaseRenderer implements Renderer, RendererCapabilities {
    */
   public BaseRenderer(int trackType) {
     this.trackType = trackType;
-    readingPositionUs = C.TIME_END_OF_SOURCE;
+    readEndOfStream = true;
   }
 
   @Override
@@ -98,7 +98,7 @@ public abstract class BaseRenderer implements Renderer, RendererCapabilities {
       throws ExoPlaybackException {
     Assertions.checkState(!streamIsFinal);
     this.stream = stream;
-    readingPositionUs = offsetUs;
+    readEndOfStream = false;
     streamFormats = formats;
     streamOffsetUs = offsetUs;
     onStreamChanged(formats, offsetUs);
@@ -111,12 +111,7 @@ public abstract class BaseRenderer implements Renderer, RendererCapabilities {
 
   @Override
   public final boolean hasReadStreamToEnd() {
-    return readingPositionUs == C.TIME_END_OF_SOURCE;
-  }
-
-  @Override
-  public final long getReadingPositionUs() {
-    return readingPositionUs;
+    return readEndOfStream;
   }
 
   @Override
@@ -137,7 +132,7 @@ public abstract class BaseRenderer implements Renderer, RendererCapabilities {
   @Override
   public final void resetPosition(long positionUs) throws ExoPlaybackException {
     streamIsFinal = false;
-    readingPositionUs = positionUs;
+    readEndOfStream = false;
     onPositionReset(positionUs, false);
   }
 
@@ -156,12 +151,6 @@ public abstract class BaseRenderer implements Renderer, RendererCapabilities {
     streamFormats = null;
     streamIsFinal = false;
     onDisabled();
-  }
-
-  @Override
-  public final void reset() {
-    Assertions.checkState(state == STATE_DISABLED);
-    onReset();
   }
 
   // RendererCapabilities implementation.
@@ -258,15 +247,6 @@ public abstract class BaseRenderer implements Renderer, RendererCapabilities {
     // Do nothing.
   }
 
-  /**
-   * Called when the renderer is reset.
-   *
-   * <p>The default implementation is a no-op.
-   */
-  protected void onReset() {
-    // Do nothing.
-  }
-
   // Methods to be called by subclasses.
 
   /** Returns the formats of the currently enabled stream. */
@@ -308,11 +288,10 @@ public abstract class BaseRenderer implements Renderer, RendererCapabilities {
     int result = stream.readData(formatHolder, buffer, formatRequired);
     if (result == C.RESULT_BUFFER_READ) {
       if (buffer.isEndOfStream()) {
-        readingPositionUs = C.TIME_END_OF_SOURCE;
+        readEndOfStream = true;
         return streamIsFinal ? C.RESULT_BUFFER_READ : C.RESULT_NOTHING_READ;
       }
       buffer.timeUs += streamOffsetUs;
-      readingPositionUs = Math.max(readingPositionUs, buffer.timeUs);
     } else if (result == C.RESULT_FORMAT_READ) {
       Format format = formatHolder.format;
       if (format.subsampleOffsetUs != Format.OFFSET_SAMPLE_RELATIVE) {
@@ -338,7 +317,7 @@ public abstract class BaseRenderer implements Renderer, RendererCapabilities {
    * Returns whether the upstream source is ready.
    */
   protected final boolean isSourceReady() {
-    return hasReadStreamToEnd() ? streamIsFinal : stream.isReady();
+    return readEndOfStream ? streamIsFinal : stream.isReady();
   }
 
   /**

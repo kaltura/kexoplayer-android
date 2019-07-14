@@ -15,19 +15,21 @@
  */
 package com.kaltura.android.exoplayer2.audio;
 
-import androidx.annotation.IntDef;
+import android.support.annotation.IntDef;
 import com.kaltura.android.exoplayer2.C;
+import com.kaltura.android.exoplayer2.Format;
 import com.kaltura.android.exoplayer2.util.Util;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * An {@link AudioProcessor} that skips silence in the input stream. Input and output are 16-bit
  * PCM.
  */
-public final class SilenceSkippingAudioProcessor extends BaseAudioProcessor {
+public final class SilenceSkippingAudioProcessor implements AudioProcessor {
 
   /**
    * The minimum duration of audio that must be below {@link #SILENCE_THRESHOLD_LEVEL} to classify
@@ -68,9 +70,15 @@ public final class SilenceSkippingAudioProcessor extends BaseAudioProcessor {
   /** State when the input is silent. */
   private static final int STATE_SILENT = 2;
 
+  private int channelCount;
+  private int sampleRateHz;
   private int bytesPerFrame;
 
   private boolean enabled;
+
+  private ByteBuffer buffer;
+  private ByteBuffer outputBuffer;
+  private boolean inputEnded;
 
   /**
    * Buffers audio data that may be classified as silence while in {@link #STATE_MAYBE_SILENT}. If
@@ -85,7 +93,7 @@ public final class SilenceSkippingAudioProcessor extends BaseAudioProcessor {
    */
   private byte[] paddingBuffer;
 
-  @State private int state;
+  private @State int state;
   private int maybeSilenceBufferSize;
   private int paddingSize;
   private boolean hasOutputNoise;
@@ -93,6 +101,10 @@ public final class SilenceSkippingAudioProcessor extends BaseAudioProcessor {
 
   /** Creates a new silence trimming audio processor. */
   public SilenceSkippingAudioProcessor() {
+    buffer = EMPTY_BUFFER;
+    outputBuffer = EMPTY_BUFFER;
+    channelCount = Format.NO_VALUE;
+    sampleRateHz = Format.NO_VALUE;
     maybeSilenceBuffer = Util.EMPTY_BYTE_ARRAY;
     paddingBuffer = Util.EMPTY_BYTE_ARRAY;
   }
@@ -119,23 +131,43 @@ public final class SilenceSkippingAudioProcessor extends BaseAudioProcessor {
   // AudioProcessor implementation.
 
   @Override
-  public boolean configure(int sampleRateHz, int channelCount, @C.PcmEncoding int encoding)
+  public boolean configure(int sampleRateHz, int channelCount, int encoding)
       throws UnhandledFormatException {
     if (encoding != C.ENCODING_PCM_16BIT) {
       throw new UnhandledFormatException(sampleRateHz, channelCount, encoding);
     }
+    if (this.sampleRateHz == sampleRateHz && this.channelCount == channelCount) {
+      return false;
+    }
+    this.sampleRateHz = sampleRateHz;
+    this.channelCount = channelCount;
     bytesPerFrame = channelCount * 2;
-    return setInputFormat(sampleRateHz, channelCount, encoding);
+    return true;
   }
 
   @Override
   public boolean isActive() {
-    return super.isActive() && enabled;
+    return sampleRateHz != Format.NO_VALUE && enabled;
+  }
+
+  @Override
+  public int getOutputChannelCount() {
+    return channelCount;
+  }
+
+  @Override
+  public @C.Encoding int getOutputEncoding() {
+    return C.ENCODING_PCM_16BIT;
+  }
+
+  @Override
+  public int getOutputSampleRateHz() {
+    return sampleRateHz;
   }
 
   @Override
   public void queueInput(ByteBuffer inputBuffer) {
-    while (inputBuffer.hasRemaining() && !hasPendingOutput()) {
+    while (inputBuffer.hasRemaining() && !outputBuffer.hasRemaining()) {
       switch (state) {
         case STATE_NOISY:
           processNoisy(inputBuffer);
@@ -153,7 +185,8 @@ public final class SilenceSkippingAudioProcessor extends BaseAudioProcessor {
   }
 
   @Override
-  protected void onQueueEndOfStream() {
+  public void queueEndOfStream() {
+    inputEnded = true;
     if (maybeSilenceBufferSize > 0) {
       // We haven't received enough silence to transition to the silent state, so output the buffer.
       output(maybeSilenceBuffer, maybeSilenceBufferSize);
@@ -164,7 +197,20 @@ public final class SilenceSkippingAudioProcessor extends BaseAudioProcessor {
   }
 
   @Override
-  protected void onFlush() {
+  public ByteBuffer getOutput() {
+    ByteBuffer outputBuffer = this.outputBuffer;
+    this.outputBuffer = EMPTY_BUFFER;
+    return outputBuffer;
+  }
+
+  @SuppressWarnings("ReferenceEquality")
+  @Override
+  public boolean isEnded() {
+    return inputEnded && outputBuffer == EMPTY_BUFFER;
+  }
+
+  @Override
+  public void flush() {
     if (isActive()) {
       int maybeSilenceBufferSize = durationUsToFrames(MINIMUM_SILENCE_DURATION_US) * bytesPerFrame;
       if (maybeSilenceBuffer.length != maybeSilenceBufferSize) {
@@ -176,14 +222,20 @@ public final class SilenceSkippingAudioProcessor extends BaseAudioProcessor {
       }
     }
     state = STATE_NOISY;
+    outputBuffer = EMPTY_BUFFER;
+    inputEnded = false;
     skippedFrames = 0;
     maybeSilenceBufferSize = 0;
     hasOutputNoise = false;
   }
 
   @Override
-  protected void onReset() {
+  public void reset() {
     enabled = false;
+    flush();
+    buffer = EMPTY_BUFFER;
+    channelCount = Format.NO_VALUE;
+    sampleRateHz = Format.NO_VALUE;
     paddingSize = 0;
     maybeSilenceBuffer = Util.EMPTY_BYTE_ARRAY;
     paddingBuffer = Util.EMPTY_BYTE_ARRAY;
@@ -278,19 +330,30 @@ public final class SilenceSkippingAudioProcessor extends BaseAudioProcessor {
    * processor.
    */
   private void output(byte[] data, int length) {
-    replaceOutputBuffer(length).put(data, 0, length).flip();
-    if (length > 0) {
-      hasOutputNoise = true;
-    }
+    prepareForOutput(length);
+    buffer.put(data, 0, length);
+    buffer.flip();
+    outputBuffer = buffer;
   }
 
   /**
    * Copies remaining bytes from {@code data} to populate a new output buffer from the processor.
    */
   private void output(ByteBuffer data) {
-    int length = data.remaining();
-    replaceOutputBuffer(length).put(data).flip();
-    if (length > 0) {
+    prepareForOutput(data.remaining());
+    buffer.put(data);
+    buffer.flip();
+    outputBuffer = buffer;
+  }
+
+  /** Prepares to output {@code size} bytes in {@code buffer}. */
+  private void prepareForOutput(int size) {
+    if (buffer.capacity() < size) {
+      buffer = ByteBuffer.allocateDirect(size).order(ByteOrder.nativeOrder());
+    } else {
+      buffer.clear();
+    }
+    if (size > 0) {
       hasOutputNoise = true;
     }
   }

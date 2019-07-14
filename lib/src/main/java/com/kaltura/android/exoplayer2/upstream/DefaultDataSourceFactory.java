@@ -16,7 +16,7 @@
 package com.kaltura.android.exoplayer2.upstream;
 
 import android.content.Context;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.upstream.DataSource.Factory;
 
 /**

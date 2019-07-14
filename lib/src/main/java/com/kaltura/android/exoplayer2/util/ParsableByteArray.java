@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.util;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;

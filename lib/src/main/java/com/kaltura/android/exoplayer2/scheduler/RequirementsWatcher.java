@@ -27,8 +27,9 @@ import android.net.NetworkRequest;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
-import androidx.annotation.RequiresApi;
+import android.support.annotation.RequiresApi;
 import com.kaltura.android.exoplayer2.util.Assertions;
+import com.kaltura.android.exoplayer2.util.Log;
 import com.kaltura.android.exoplayer2.util.Util;
 
 /**
@@ -41,26 +42,30 @@ public final class RequirementsWatcher {
    * Requirements} are met.
    */
   public interface Listener {
+
     /**
-     * Called when there is a change on the met requirements.
+     * Called when the requirements are met.
      *
      * @param requirementsWatcher Calling instance.
-     * @param notMetRequirements {@link Requirements.RequirementFlags RequirementFlags} that are not
-     *     met, or 0.
      */
-    void onRequirementsStateChanged(
-        RequirementsWatcher requirementsWatcher,
-        @Requirements.RequirementFlags int notMetRequirements);
+    void requirementsMet(RequirementsWatcher requirementsWatcher);
+
+    /**
+     * Called when the requirements are not met.
+     *
+     * @param requirementsWatcher Calling instance.
+     */
+    void requirementsNotMet(RequirementsWatcher requirementsWatcher);
   }
+
+  private static final String TAG = "RequirementsWatcher";
 
   private final Context context;
   private final Listener listener;
   private final Requirements requirements;
-  private final Handler handler;
-
   private DeviceStatusChangeReceiver receiver;
 
-  @Requirements.RequirementFlags private int notMetRequirements;
+  private boolean requirementsWereMet;
   private CapabilityValidatedCallback networkCallback;
 
   /**
@@ -69,24 +74,23 @@ public final class RequirementsWatcher {
    * @param requirements The requirements to watch.
    */
   public RequirementsWatcher(Context context, Listener listener, Requirements requirements) {
-    this.context = context.getApplicationContext();
-    this.listener = listener;
     this.requirements = requirements;
-    handler = new Handler(Util.getLooper());
+    this.listener = listener;
+    this.context = context.getApplicationContext();
+    logd(this + " created");
   }
 
   /**
    * Starts watching for changes. Must be called from a thread that has an associated {@link
    * Looper}. Listener methods are called on the caller thread.
-   *
-   * @return Initial {@link Requirements.RequirementFlags RequirementFlags} that are not met, or 0.
    */
-  @Requirements.RequirementFlags
-  public int start() {
-    notMetRequirements = requirements.getNotMetRequirements(context);
+  public void start() {
+    Assertions.checkNotNull(Looper.myLooper());
+
+    requirementsWereMet = requirements.checkRequirements(context);
 
     IntentFilter filter = new IntentFilter();
-    if (requirements.isNetworkRequired()) {
+    if (requirements.getRequiredNetworkType() != Requirements.NETWORK_TYPE_NONE) {
       if (Util.SDK_INT >= 23) {
         registerNetworkCallbackV23();
       } else {
@@ -106,8 +110,8 @@ public final class RequirementsWatcher {
       }
     }
     receiver = new DeviceStatusChangeReceiver();
-    context.registerReceiver(receiver, filter, null, handler);
-    return notMetRequirements;
+    context.registerReceiver(receiver, filter, null, new Handler());
+    logd(this + " started");
   }
 
   /** Stops watching for changes. */
@@ -117,6 +121,7 @@ public final class RequirementsWatcher {
     if (networkCallback != null) {
       unregisterNetworkCallback();
     }
+    logd(this + " stopped");
   }
 
   /** Returns watched {@link Requirements}. */
@@ -124,11 +129,18 @@ public final class RequirementsWatcher {
     return requirements;
   }
 
+  @Override
+  public String toString() {
+    if (!Scheduler.DEBUG) {
+      return super.toString();
+    }
+    return "RequirementsWatcher{" + requirements + '}';
+  }
+
   @TargetApi(23)
   private void registerNetworkCallbackV23() {
     ConnectivityManager connectivityManager =
-        Assertions.checkNotNull(
-            (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE));
+        (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
     NetworkRequest request =
         new NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
@@ -147,11 +159,24 @@ public final class RequirementsWatcher {
   }
 
   private void checkRequirements() {
-    @Requirements.RequirementFlags
-    int notMetRequirements = requirements.getNotMetRequirements(context);
-    if (this.notMetRequirements != notMetRequirements) {
-      this.notMetRequirements = notMetRequirements;
-      listener.onRequirementsStateChanged(this, notMetRequirements);
+    boolean requirementsAreMet = requirements.checkRequirements(context);
+    if (requirementsAreMet == requirementsWereMet) {
+      logd("requirementsAreMet is still " + requirementsAreMet);
+      return;
+    }
+    requirementsWereMet = requirementsAreMet;
+    if (requirementsAreMet) {
+      logd("start job");
+      listener.requirementsMet(this);
+    } else {
+      logd("stop job");
+      listener.requirementsNotMet(this);
+    }
+  }
+
+  private static void logd(String message) {
+    if (Scheduler.DEBUG) {
+      Log.d(TAG, message);
     }
   }
 
@@ -159,6 +184,7 @@ public final class RequirementsWatcher {
     @Override
     public void onReceive(Context context, Intent intent) {
       if (!isInitialStickyBroadcast()) {
+        logd(RequirementsWatcher.this + " received " + intent.getAction());
         checkRequirements();
       }
     }
@@ -168,21 +194,16 @@ public final class RequirementsWatcher {
   private final class CapabilityValidatedCallback extends ConnectivityManager.NetworkCallback {
     @Override
     public void onAvailable(Network network) {
-      onNetworkCallback();
+      super.onAvailable(network);
+      logd(RequirementsWatcher.this + " NetworkCallback.onAvailable");
+      checkRequirements();
     }
 
     @Override
     public void onLost(Network network) {
-      onNetworkCallback();
-    }
-
-    private void onNetworkCallback() {
-      handler.post(
-          () -> {
-            if (networkCallback != null) {
-              checkRequirements();
-            }
-          });
+      super.onLost(network);
+      logd(RequirementsWatcher.this + " NetworkCallback.onLost");
+      checkRequirements();
     }
   }
 }

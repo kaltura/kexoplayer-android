@@ -15,7 +15,6 @@
  */
 package com.kaltura.android.exoplayer2.upstream.cache;
 
-import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.upstream.cache.Cache.CacheException;
 import java.util.Comparator;
 import java.util.TreeSet;
@@ -36,20 +35,13 @@ public final class LeastRecentlyUsedCacheEvictor implements CacheEvictor, Compar
   }
 
   @Override
-  public boolean requiresCacheSpanTouches() {
-    return true;
-  }
-
-  @Override
   public void onCacheInitialized() {
     // Do nothing.
   }
 
   @Override
-  public void onStartFile(Cache cache, String key, long position, long length) {
-    if (length != C.LENGTH_UNSET) {
-      evictCache(cache, length);
-    }
+  public void onStartFile(Cache cache, String key, long position, long maxLength) {
+    evictCache(cache, maxLength);
   }
 
   @Override
@@ -73,12 +65,12 @@ public final class LeastRecentlyUsedCacheEvictor implements CacheEvictor, Compar
 
   @Override
   public int compare(CacheSpan lhs, CacheSpan rhs) {
-    long lastTouchTimestampDelta = lhs.lastTouchTimestamp - rhs.lastTouchTimestamp;
-    if (lastTouchTimestampDelta == 0) {
+    long lastAccessTimestampDelta = lhs.lastAccessTimestamp - rhs.lastAccessTimestamp;
+    if (lastAccessTimestampDelta == 0) {
       // Use the standard compareTo method as a tie-break.
       return lhs.compareTo(rhs);
     }
-    return lhs.lastTouchTimestamp < rhs.lastTouchTimestamp ? -1 : 1;
+    return lhs.lastAccessTimestamp < rhs.lastAccessTimestamp ? -1 : 1;
   }
 
   private void evictCache(Cache cache, long requiredSpace) {

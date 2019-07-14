@@ -15,73 +15,44 @@
  */
 package com.kaltura.android.exoplayer2.upstream.cache;
 
-import android.net.Uri;
-import androidx.annotation.Nullable;
-import com.kaltura.android.exoplayer2.C;
-
 /**
  * Interface for an immutable snapshot of keyed metadata.
+ *
+ * <p>Internal metadata names are prefixed with {@value #INTERNAL_METADATA_NAME_PREFIX}. Custom
+ * metadata names should avoid this prefix to prevent clashes.
  */
 public interface ContentMetadata {
 
-  /**
-   * Prefix for custom metadata keys. Applications can use keys starting with this prefix without
-   * any risk of their keys colliding with ones defined by the ExoPlayer library.
-   */
-  @SuppressWarnings("unused")
-  String KEY_CUSTOM_PREFIX = "custom_";
-  /** Key for redirected uri (type: String). */
-  String KEY_REDIRECTED_URI = "exo_redir";
-  /** Key for content length in bytes (type: long). */
-  String KEY_CONTENT_LENGTH = "exo_len";
+  /** Prefix of internal metadata names. */
+  String INTERNAL_METADATA_NAME_PREFIX = "exo_";
 
   /**
    * Returns a metadata value.
    *
-   * @param key Key of the metadata to be returned.
+   * @param name Name of the metadata to be returned.
    * @param defaultValue Value to return if the metadata doesn't exist.
    * @return The metadata value.
    */
-  @Nullable
-  byte[] get(String key, @Nullable byte[] defaultValue);
+  byte[] get(String name, byte[] defaultValue);
 
   /**
    * Returns a metadata value.
    *
-   * @param key Key of the metadata to be returned.
+   * @param name Name of the metadata to be returned.
    * @param defaultValue Value to return if the metadata doesn't exist.
    * @return The metadata value.
    */
-  @Nullable
-  String get(String key, @Nullable String defaultValue);
+  String get(String name, String defaultValue);
 
   /**
    * Returns a metadata value.
    *
-   * @param key Key of the metadata to be returned.
+   * @param name Name of the metadata to be returned.
    * @param defaultValue Value to return if the metadata doesn't exist.
    * @return The metadata value.
    */
-  long get(String key, long defaultValue);
+  long get(String name, long defaultValue);
 
   /** Returns whether the metadata is available. */
-  boolean contains(String key);
-
-  /**
-   * Returns the value stored under {@link #KEY_CONTENT_LENGTH}, or {@link C#LENGTH_UNSET} if not
-   * set.
-   */
-  static long getContentLength(ContentMetadata contentMetadata) {
-    return contentMetadata.get(KEY_CONTENT_LENGTH, C.LENGTH_UNSET);
-  }
-
-  /**
-   * Returns the value stored under {@link #KEY_REDIRECTED_URI} as a {@link Uri}, or {code null} if
-   * not set.
-   */
-  @Nullable
-  static Uri getRedirectedUri(ContentMetadata contentMetadata) {
-    String redirectedUri = contentMetadata.get(KEY_REDIRECTED_URI, (String) null);
-    return redirectedUri == null ? null : Uri.parse(redirectedUri);
-  }
+  boolean contains(String name);
 }

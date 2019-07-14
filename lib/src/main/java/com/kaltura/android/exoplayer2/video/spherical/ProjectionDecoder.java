@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.video.spherical;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.util.ParsableBitArray;
 import com.kaltura.android.exoplayer2.util.ParsableByteArray;

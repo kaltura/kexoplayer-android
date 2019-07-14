@@ -17,7 +17,7 @@ package com.kaltura.android.exoplayer2.audio;
 
 import android.media.AudioTrack;
 import android.media.audiofx.AudioEffect;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 
 /**
  * Represents auxiliary effect information, which can be used to attach an auxiliary effect to an

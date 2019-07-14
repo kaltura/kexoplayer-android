@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.source.ads;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import android.view.View;
 import android.view.ViewGroup;
 import com.kaltura.android.exoplayer2.C;

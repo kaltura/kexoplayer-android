@@ -18,19 +18,19 @@ package com.kaltura.android.exoplayer2.source.ads;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
-import androidx.annotation.IntDef;
-import androidx.annotation.Nullable;
+import android.support.annotation.IntDef;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.Timeline;
 import com.kaltura.android.exoplayer2.source.CompositeMediaSource;
 import com.kaltura.android.exoplayer2.source.DeferredMediaPeriod;
+import com.kaltura.android.exoplayer2.source.ExtractorMediaSource;
 import com.kaltura.android.exoplayer2.source.MediaPeriod;
 import com.kaltura.android.exoplayer2.source.MediaSource;
 import com.kaltura.android.exoplayer2.source.MediaSource.MediaPeriodId;
 import com.kaltura.android.exoplayer2.source.MediaSourceEventListener;
 import com.kaltura.android.exoplayer2.source.MediaSourceEventListener.LoadEventInfo;
 import com.kaltura.android.exoplayer2.source.MediaSourceEventListener.MediaLoadData;
-import com.kaltura.android.exoplayer2.source.ProgressiveMediaSource;
 import com.kaltura.android.exoplayer2.upstream.Allocator;
 import com.kaltura.android.exoplayer2.upstream.DataSource;
 import com.kaltura.android.exoplayer2.upstream.DataSpec;
@@ -160,7 +160,7 @@ public final class AdsMediaSource extends CompositeMediaSource<MediaPeriodId> {
 
   /**
    * Constructs a new source that inserts ads linearly with the content specified by {@code
-   * contentMediaSource}. Ad media is loaded using {@link ProgressiveMediaSource}.
+   * contentMediaSource}. Ad media is loaded using {@link ExtractorMediaSource}.
    *
    * @param contentMediaSource The {@link MediaSource} providing the content to play.
    * @param dataSourceFactory Factory for data sources used to load ad media.
@@ -174,7 +174,7 @@ public final class AdsMediaSource extends CompositeMediaSource<MediaPeriodId> {
       AdsLoader.AdViewProvider adViewProvider) {
     this(
         contentMediaSource,
-        new ProgressiveMediaSource.Factory(dataSourceFactory),
+        new ExtractorMediaSource.Factory(dataSourceFactory),
         adsLoader,
         adViewProvider);
   }

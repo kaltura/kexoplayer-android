@@ -18,15 +18,13 @@ package com.kaltura.android.exoplayer2.source.dash;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.SystemClock;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.SparseArray;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.ExoPlayerLibraryInfo;
 import com.kaltura.android.exoplayer2.ParserException;
 import com.kaltura.android.exoplayer2.Timeline;
-import com.kaltura.android.exoplayer2.offline.FilteringManifestParser;
-import com.kaltura.android.exoplayer2.offline.StreamKey;
 import com.kaltura.android.exoplayer2.source.BaseMediaSource;
 import com.kaltura.android.exoplayer2.source.CompositeSequenceableLoaderFactory;
 import com.kaltura.android.exoplayer2.source.DefaultCompositeSequenceableLoaderFactory;
@@ -60,7 +58,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
@@ -77,16 +74,15 @@ public final class DashMediaSource extends BaseMediaSource {
   public static final class Factory implements AdsMediaSource.MediaSourceFactory {
 
     private final DashChunkSource.Factory chunkSourceFactory;
-    @Nullable private final DataSource.Factory manifestDataSourceFactory;
+    private final @Nullable DataSource.Factory manifestDataSourceFactory;
 
-    @Nullable private ParsingLoadable.Parser<? extends DashManifest> manifestParser;
-    @Nullable private List<StreamKey> streamKeys;
+    private @Nullable ParsingLoadable.Parser<? extends DashManifest> manifestParser;
     private CompositeSequenceableLoaderFactory compositeSequenceableLoaderFactory;
     private LoadErrorHandlingPolicy loadErrorHandlingPolicy;
     private long livePresentationDelayMs;
     private boolean livePresentationDelayOverridesManifest;
     private boolean isCreateCalled;
-    @Nullable private Object tag;
+    private @Nullable Object tag;
 
     /**
      * Creates a new factory for {@link DashMediaSource}s.
@@ -214,19 +210,6 @@ public final class DashMediaSource extends BaseMediaSource {
     }
 
     /**
-     * Sets a list of {@link StreamKey stream keys} by which the manifest is filtered.
-     *
-     * @param streamKeys A list of {@link StreamKey stream keys}.
-     * @return This factory, for convenience.
-     * @throws IllegalStateException If one of the {@code create} methods has already been called.
-     */
-    public Factory setStreamKeys(List<StreamKey> streamKeys) {
-      Assertions.checkState(!isCreateCalled);
-      this.streamKeys = streamKeys;
-      return this;
-    }
-
-    /**
      * Sets the factory to create composite {@link SequenceableLoader}s for when this media source
      * loads data from multiple streams (video, audio etc...). The default is an instance of {@link
      * DefaultCompositeSequenceableLoaderFactory}.
@@ -256,9 +239,6 @@ public final class DashMediaSource extends BaseMediaSource {
     public DashMediaSource createMediaSource(DashManifest manifest) {
       Assertions.checkArgument(!manifest.dynamic);
       isCreateCalled = true;
-      if (streamKeys != null && !streamKeys.isEmpty()) {
-        manifest = manifest.copy(streamKeys);
-      }
       return new DashMediaSource(
           manifest,
           /* manifestUri= */ null,
@@ -299,9 +279,6 @@ public final class DashMediaSource extends BaseMediaSource {
       isCreateCalled = true;
       if (manifestParser == null) {
         manifestParser = new DashManifestParser();
-      }
-      if (streamKeys != null) {
-        manifestParser = new FilteringManifestParser<>(manifestParser, streamKeys);
       }
       return new DashMediaSource(
           /* manifest= */ null,
@@ -736,17 +713,17 @@ public final class DashMediaSource extends BaseMediaSource {
         loadable.bytesLoaded());
     DashManifest newManifest = loadable.getResult();
 
-    int oldPeriodCount = manifest == null ? 0 : manifest.getPeriodCount();
+    int periodCount = manifest == null ? 0 : manifest.getPeriodCount();
     int removedPeriodCount = 0;
     long newFirstPeriodStartTimeMs = newManifest.getPeriod(0).startMs;
-    while (removedPeriodCount < oldPeriodCount
+    while (removedPeriodCount < periodCount
         && manifest.getPeriod(removedPeriodCount).startMs < newFirstPeriodStartTimeMs) {
       removedPeriodCount++;
     }
 
     if (newManifest.dynamic) {
       boolean isManifestStale = false;
-      if (oldPeriodCount - removedPeriodCount > newManifest.getPeriodCount()) {
+      if (periodCount - removedPeriodCount > newManifest.getPeriodCount()) {
         // After discarding old periods, we should never have more periods than listed in the new
         // manifest. That would mean that a previously announced period is no longer advertised. If
         // this condition occurs, assume that we are hitting a manifest server that is out of sync
@@ -796,8 +773,8 @@ public final class DashMediaSource extends BaseMediaSource {
       }
     }
 
-    if (oldPeriodCount == 0) {
-      if (manifest.dynamic && manifest.utcTiming != null) {
+    if (periodCount == 0) {
+      if (manifest.utcTiming != null) {
         resolveUtcTimingElement(manifest.utcTiming);
       } else {
         processManifest(true);
@@ -812,15 +789,8 @@ public final class DashMediaSource extends BaseMediaSource {
       ParsingLoadable<DashManifest> loadable,
       long elapsedRealtimeMs,
       long loadDurationMs,
-      IOException error,
-      int errorCount) {
-    long retryDelayMs =
-        loadErrorHandlingPolicy.getRetryDelayMsFor(
-            C.DATA_TYPE_MANIFEST, loadDurationMs, error, errorCount);
-    LoadErrorAction loadErrorAction =
-        retryDelayMs == C.TIME_UNSET
-            ? Loader.DONT_RETRY_FATAL
-            : Loader.createRetryAction(/* resetErrorCount= */ false, retryDelayMs);
+      IOException error) {
+    boolean isFatal = error instanceof ParserException;
     manifestEventDispatcher.loadError(
         loadable.dataSpec,
         loadable.getUri(),
@@ -830,8 +800,8 @@ public final class DashMediaSource extends BaseMediaSource {
         loadDurationMs,
         loadable.bytesLoaded(),
         error,
-        !loadErrorAction.isRetry());
-    return loadErrorAction;
+        isFatal);
+    return isFatal ? Loader.DONT_RETRY_FATAL : Loader.RETRY;
   }
 
   /* package */ void onUtcTimestampLoadCompleted(ParsingLoadable<Long> loadable,
@@ -1303,7 +1273,7 @@ public final class DashMediaSource extends BaseMediaSource {
         long loadDurationMs,
         IOException error,
         int errorCount) {
-      return onManifestLoadError(loadable, elapsedRealtimeMs, loadDurationMs, error, errorCount);
+      return onManifestLoadError(loadable, elapsedRealtimeMs, loadDurationMs, error);
     }
 
   }

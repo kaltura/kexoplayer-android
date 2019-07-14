@@ -31,14 +31,13 @@ public abstract class BaseMediaChunkIterator implements MediaChunkIterator {
   /**
    * Creates base iterator.
    *
-   * @param fromIndex The first available index.
+   * @param fromIndex The index at which the iterator will start.
    * @param toIndex The last available index.
    */
-  @SuppressWarnings("method.invocation.invalid")
   public BaseMediaChunkIterator(long fromIndex, long toIndex) {
     this.fromIndex = fromIndex;
     this.toIndex = toIndex;
-    reset();
+    currentIndex = fromIndex - 1;
   }
 
   @Override
@@ -52,24 +51,19 @@ public abstract class BaseMediaChunkIterator implements MediaChunkIterator {
     return !isEnded();
   }
 
-  @Override
-  public void reset() {
-    currentIndex = fromIndex - 1;
-  }
-
   /**
    * Verifies that the iterator points to a valid element.
    *
    * @throws NoSuchElementException If the iterator does not point to a valid element.
    */
-  protected final void checkInBounds() {
+  protected void checkInBounds() {
     if (currentIndex < fromIndex || currentIndex > toIndex) {
       throw new NoSuchElementException();
     }
   }
 
   /** Returns the current index this iterator is pointing to. */
-  protected final long getCurrentIndex() {
+  protected long getCurrentIndex() {
     return currentIndex;
   }
 }

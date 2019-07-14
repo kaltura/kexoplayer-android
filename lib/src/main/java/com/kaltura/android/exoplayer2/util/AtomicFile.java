@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.util;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -50,11 +50,6 @@ public final class AtomicFile {
   public AtomicFile(File baseName) {
     this.baseName = baseName;
     backupName = new File(baseName.getPath() + ".bak");
-  }
-
-  /** Returns whether the file or its backup exists. */
-  public boolean exists() {
-    return baseName.exists() || backupName.exists();
   }
 
   /** Delete the atomic file. This deletes both the base and backup files. */

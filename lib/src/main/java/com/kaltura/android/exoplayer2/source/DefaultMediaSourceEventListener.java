@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.source;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.source.MediaSource.MediaPeriodId;
 import java.io.IOException;
 

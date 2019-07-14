@@ -17,7 +17,7 @@ package com.kaltura.android.exoplayer2.ui;
 
 import com.kaltura.android.exoplayer2.R;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import android.view.View;
 
 /**
@@ -87,14 +87,6 @@ public interface TimeBar {
   void setDuration(long duration);
 
   /**
-   * Returns the preferred delay in milliseconds of media time after which the time bar position
-   * should be updated.
-   *
-   * @return Preferred delay, in milliseconds of media time.
-   */
-  long getPreferredUpdateDelay();
-
-  /**
    * Sets the times of ad groups and whether each ad group has been played.
    *
    * @param adGroupTimesMs An array where the first {@code adGroupCount} elements are the times of
@@ -116,7 +108,7 @@ public interface TimeBar {
      * Called when the user starts moving the scrubber.
      *
      * @param timeBar The time bar.
-     * @param position The scrub position in milliseconds.
+     * @param position The position of the scrubber, in milliseconds.
      */
     void onScrubStart(TimeBar timeBar, long position);
 
@@ -124,7 +116,7 @@ public interface TimeBar {
      * Called when the user moves the scrubber.
      *
      * @param timeBar The time bar.
-     * @param position The scrub position in milliseconds.
+     * @param position The position of the scrubber, in milliseconds.
      */
     void onScrubMove(TimeBar timeBar, long position);
 
@@ -132,10 +124,11 @@ public interface TimeBar {
      * Called when the user stops moving the scrubber.
      *
      * @param timeBar The time bar.
-     * @param position The scrub position in milliseconds.
+     * @param position The position of the scrubber, in milliseconds.
      * @param canceled Whether scrubbing was canceled.
      */
     void onScrubStop(TimeBar timeBar, long position, boolean canceled);
+
   }
 
 }

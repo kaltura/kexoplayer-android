@@ -27,8 +27,8 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import androidx.annotation.ColorInt;
-import androidx.annotation.Nullable;
+import android.support.annotation.ColorInt;
+import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.view.KeyEvent;
@@ -207,7 +207,6 @@ public class DefaultTimeBar extends View implements TimeBar {
   private final CopyOnWriteArraySet<OnScrubListener> listeners;
   private final int[] locationOnScreen;
   private final Point touchPosition;
-  private final float density;
 
   private int keyCountIncrement;
   private long keyTimeIncrement;
@@ -222,26 +221,11 @@ public class DefaultTimeBar extends View implements TimeBar {
   private @Nullable long[] adGroupTimesMs;
   private @Nullable boolean[] playedAdGroups;
 
-  public DefaultTimeBar(Context context) {
-    this(context, null);
-  }
-
-  public DefaultTimeBar(Context context, @Nullable AttributeSet attrs) {
-    this(context, attrs, 0);
-  }
-
-  public DefaultTimeBar(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
-    this(context, attrs, defStyleAttr, attrs);
-  }
-
+  /** Creates a new time bar. */
   // Suppress warnings due to usage of View methods in the constructor.
   @SuppressWarnings("nullness:method.invocation.invalid")
-  public DefaultTimeBar(
-      Context context,
-      @Nullable AttributeSet attrs,
-      int defStyleAttr,
-      @Nullable AttributeSet timebarAttrs) {
-    super(context, attrs, defStyleAttr);
+  public DefaultTimeBar(Context context, AttributeSet attrs) {
+    super(context, attrs);
     seekBounds = new Rect();
     progressBar = new Rect();
     bufferedBar = new Rect();
@@ -260,17 +244,16 @@ public class DefaultTimeBar extends View implements TimeBar {
     // Calculate the dimensions and paints for drawn elements.
     Resources res = context.getResources();
     DisplayMetrics displayMetrics = res.getDisplayMetrics();
-    density = displayMetrics.density;
-    fineScrubYThreshold = dpToPx(density, FINE_SCRUB_Y_THRESHOLD_DP);
-    int defaultBarHeight = dpToPx(density, DEFAULT_BAR_HEIGHT_DP);
-    int defaultTouchTargetHeight = dpToPx(density, DEFAULT_TOUCH_TARGET_HEIGHT_DP);
-    int defaultAdMarkerWidth = dpToPx(density, DEFAULT_AD_MARKER_WIDTH_DP);
-    int defaultScrubberEnabledSize = dpToPx(density, DEFAULT_SCRUBBER_ENABLED_SIZE_DP);
-    int defaultScrubberDisabledSize = dpToPx(density, DEFAULT_SCRUBBER_DISABLED_SIZE_DP);
-    int defaultScrubberDraggedSize = dpToPx(density, DEFAULT_SCRUBBER_DRAGGED_SIZE_DP);
-    if (timebarAttrs != null) {
-      TypedArray a =
-          context.getTheme().obtainStyledAttributes(timebarAttrs, R.styleable.DefaultTimeBar, 0, 0);
+    fineScrubYThreshold = dpToPx(displayMetrics, FINE_SCRUB_Y_THRESHOLD_DP);
+    int defaultBarHeight = dpToPx(displayMetrics, DEFAULT_BAR_HEIGHT_DP);
+    int defaultTouchTargetHeight = dpToPx(displayMetrics, DEFAULT_TOUCH_TARGET_HEIGHT_DP);
+    int defaultAdMarkerWidth = dpToPx(displayMetrics, DEFAULT_AD_MARKER_WIDTH_DP);
+    int defaultScrubberEnabledSize = dpToPx(displayMetrics, DEFAULT_SCRUBBER_ENABLED_SIZE_DP);
+    int defaultScrubberDisabledSize = dpToPx(displayMetrics, DEFAULT_SCRUBBER_DISABLED_SIZE_DP);
+    int defaultScrubberDraggedSize = dpToPx(displayMetrics, DEFAULT_SCRUBBER_DRAGGED_SIZE_DP);
+    if (attrs != null) {
+      TypedArray a = context.getTheme().obtainStyledAttributes(attrs, R.styleable.DefaultTimeBar, 0,
+          0);
       try {
         scrubberDrawable = a.getDrawable(R.styleable.DefaultTimeBar_scrubber_drawable);
         if (scrubberDrawable != null) {
@@ -338,8 +321,8 @@ public class DefaultTimeBar extends View implements TimeBar {
     keyTimeIncrement = C.TIME_UNSET;
     keyCountIncrement = DEFAULT_INCREMENT_COUNT;
     setFocusable(true);
-    if (getImportantForAccessibility() == View.IMPORTANT_FOR_ACCESSIBILITY_AUTO) {
-      setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+    if (Util.SDK_INT >= 16) {
+      maybeSetImportantForAccessibilityV16();
     }
   }
 
@@ -450,17 +433,9 @@ public class DefaultTimeBar extends View implements TimeBar {
   public void setDuration(long duration) {
     this.duration = duration;
     if (scrubbing && duration == C.TIME_UNSET) {
-      stopScrubbing(/* canceled= */ true);
+      stopScrubbing(true);
     }
     update();
-  }
-
-  @Override
-  public long getPreferredUpdateDelay() {
-    int timeBarWidthDp = pxToDp(density, progressBar.width());
-    return timeBarWidthDp == 0 || duration == 0 || duration == C.TIME_UNSET
-        ? Long.MAX_VALUE
-        : duration / timeBarWidthDp;
   }
 
   @Override
@@ -480,7 +455,7 @@ public class DefaultTimeBar extends View implements TimeBar {
   public void setEnabled(boolean enabled) {
     super.setEnabled(enabled);
     if (scrubbing && !enabled) {
-      stopScrubbing(/* canceled= */ true);
+      stopScrubbing(true);
     }
   }
 
@@ -504,7 +479,8 @@ public class DefaultTimeBar extends View implements TimeBar {
       case MotionEvent.ACTION_DOWN:
         if (isInSeekBar(x, y)) {
           positionScrubber(x);
-          startScrubbing(getScrubberPosition());
+          startScrubbing();
+          scrubPosition = getScrubberPosition();
           update();
           invalidate();
           return true;
@@ -519,7 +495,10 @@ public class DefaultTimeBar extends View implements TimeBar {
             lastCoarseScrubXPosition = x;
             positionScrubber(x);
           }
-          updateScrubbing(getScrubberPosition());
+          scrubPosition = getScrubberPosition();
+          for (OnScrubListener listener : listeners) {
+            listener.onScrubMove(this, scrubPosition);
+          }
           update();
           invalidate();
           return true;
@@ -528,7 +507,7 @@ public class DefaultTimeBar extends View implements TimeBar {
       case MotionEvent.ACTION_UP:
       case MotionEvent.ACTION_CANCEL:
         if (scrubbing) {
-          stopScrubbing(/* canceled= */ event.getAction() == MotionEvent.ACTION_CANCEL);
+          stopScrubbing(event.getAction() == MotionEvent.ACTION_CANCEL);
           return true;
         }
         break;
@@ -556,7 +535,8 @@ public class DefaultTimeBar extends View implements TimeBar {
         case KeyEvent.KEYCODE_DPAD_CENTER:
         case KeyEvent.KEYCODE_ENTER:
           if (scrubbing) {
-            stopScrubbing(/* canceled= */ false);
+            removeCallbacks(stopScrubbingRunnable);
+            stopScrubbingRunnable.run();
             return true;
           }
           break;
@@ -565,15 +545,6 @@ public class DefaultTimeBar extends View implements TimeBar {
       }
     }
     return super.onKeyDown(keyCode, event);
-  }
-
-  @Override
-  protected void onFocusChanged(
-      boolean gainFocus, int direction, @Nullable Rect previouslyFocusedRect) {
-    super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
-    if (scrubbing && !gainFocus) {
-      stopScrubbing(/* canceled= */ false);
-    }
   }
 
   @Override
@@ -642,12 +613,13 @@ public class DefaultTimeBar extends View implements TimeBar {
     if (Util.SDK_INT >= 21) {
       info.addAction(AccessibilityAction.ACTION_SCROLL_FORWARD);
       info.addAction(AccessibilityAction.ACTION_SCROLL_BACKWARD);
-    } else {
+    } else if (Util.SDK_INT >= 16) {
       info.addAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
       info.addAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
     }
   }
 
+  @TargetApi(16)
   @Override
   public boolean performAccessibilityAction(int action, @Nullable Bundle args) {
     if (super.performAccessibilityAction(action, args)) {
@@ -658,11 +630,11 @@ public class DefaultTimeBar extends View implements TimeBar {
     }
     if (action == AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD) {
       if (scrubIncrementally(-getPositionIncrement())) {
-        stopScrubbing(/* canceled= */ false);
+        stopScrubbing(false);
       }
     } else if (action == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD) {
       if (scrubIncrementally(getPositionIncrement())) {
-        stopScrubbing(/* canceled= */ false);
+        stopScrubbing(false);
       }
     } else {
       return false;
@@ -673,8 +645,14 @@ public class DefaultTimeBar extends View implements TimeBar {
 
   // Internal methods.
 
-  private void startScrubbing(long scrubPosition) {
-    this.scrubPosition = scrubPosition;
+  @TargetApi(16)
+  private void maybeSetImportantForAccessibilityV16() {
+    if (getImportantForAccessibility() == View.IMPORTANT_FOR_ACCESSIBILITY_AUTO) {
+      setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+    }
+  }
+
+  private void startScrubbing() {
     scrubbing = true;
     setPressed(true);
     ViewParent parent = getParent();
@@ -682,22 +660,11 @@ public class DefaultTimeBar extends View implements TimeBar {
       parent.requestDisallowInterceptTouchEvent(true);
     }
     for (OnScrubListener listener : listeners) {
-      listener.onScrubStart(this, scrubPosition);
-    }
-  }
-
-  private void updateScrubbing(long scrubPosition) {
-    if (this.scrubPosition == scrubPosition) {
-      return;
-    }
-    this.scrubPosition = scrubPosition;
-    for (OnScrubListener listener : listeners) {
-      listener.onScrubMove(this, scrubPosition);
+      listener.onScrubStart(this, getScrubberPosition());
     }
   }
 
   private void stopScrubbing(boolean canceled) {
-    removeCallbacks(stopScrubbingRunnable);
     scrubbing = false;
     setPressed(false);
     ViewParent parent = getParent();
@@ -706,32 +673,8 @@ public class DefaultTimeBar extends View implements TimeBar {
     }
     invalidate();
     for (OnScrubListener listener : listeners) {
-      listener.onScrubStop(this, scrubPosition, canceled);
+      listener.onScrubStop(this, getScrubberPosition(), canceled);
     }
-  }
-
-  /**
-   * Incrementally scrubs the position by {@code positionChange}.
-   *
-   * @param positionChange The change in the scrubber position, in milliseconds. May be negative.
-   * @return Returns whether the scrubber position changed.
-   */
-  private boolean scrubIncrementally(long positionChange) {
-    if (duration <= 0) {
-      return false;
-    }
-    long previousPosition = scrubbing ? scrubPosition : position;
-    long scrubPosition = Util.constrainValue(previousPosition + positionChange, 0, duration);
-    if (scrubPosition == previousPosition) {
-      return false;
-    }
-    if (!scrubbing) {
-      startScrubbing(scrubPosition);
-    } else {
-      updateScrubbing(scrubPosition);
-    }
-    update();
-    return true;
   }
 
   private void update() {
@@ -850,6 +793,31 @@ public class DefaultTimeBar extends View implements TimeBar {
         ? (duration == C.TIME_UNSET ? 0 : (duration / keyCountIncrement)) : keyTimeIncrement;
   }
 
+  /**
+   * Incrementally scrubs the position by {@code positionChange}.
+   *
+   * @param positionChange The change in the scrubber position, in milliseconds. May be negative.
+   * @return Returns whether the scrubber position changed.
+   */
+  private boolean scrubIncrementally(long positionChange) {
+    if (duration <= 0) {
+      return false;
+    }
+    long scrubberPosition = getScrubberPosition();
+    scrubPosition = Util.constrainValue(scrubberPosition + positionChange, 0, duration);
+    if (scrubPosition == scrubberPosition) {
+      return false;
+    }
+    if (!scrubbing) {
+      startScrubbing();
+    }
+    for (OnScrubListener listener : listeners) {
+      listener.onScrubMove(this, scrubPosition);
+    }
+    update();
+    return true;
+  }
+
   private boolean setDrawableLayoutDirection(Drawable drawable) {
     return Util.SDK_INT >= 23 && setDrawableLayoutDirection(drawable, getLayoutDirection());
   }
@@ -874,11 +842,7 @@ public class DefaultTimeBar extends View implements TimeBar {
     return 0x33000000 | (adMarkerColor & 0x00FFFFFF);
   }
 
-  private static int dpToPx(float density, int dps) {
-    return (int) (dps * density + 0.5f);
-  }
-
-  private static int pxToDp(float density, int px) {
-    return (int) (px / density);
+  private static int dpToPx(DisplayMetrics displayMetrics, int dps) {
+    return (int) (dps * displayMetrics.density + 0.5f);
   }
 }

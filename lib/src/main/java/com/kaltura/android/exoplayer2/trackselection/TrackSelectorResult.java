@@ -15,7 +15,6 @@
  */
 package com.kaltura.android.exoplayer2.trackselection;
 
-import androidx.annotation.Nullable;
 import com.kaltura.android.exoplayer2.RendererConfiguration;
 import com.kaltura.android.exoplayer2.util.Util;
 import org.checkerframework.checker.nullness.compatqual.NullableType;
@@ -71,7 +70,7 @@ public final class TrackSelectorResult {
    *     will be returned.
    * @return Whether this result is equivalent to {@code other} for all renderers.
    */
-  public boolean isEquivalent(@Nullable TrackSelectorResult other) {
+  public boolean isEquivalent(TrackSelectorResult other) {
     if (other == null || other.selections.length != selections.length) {
       return false;
     }
@@ -94,7 +93,7 @@ public final class TrackSelectorResult {
    * @return Whether this result is equivalent to {@code other} for the renderer at the specified
    *     index.
    */
-  public boolean isEquivalent(@Nullable TrackSelectorResult other, int index) {
+  public boolean isEquivalent(TrackSelectorResult other, int index) {
     if (other == null) {
       return false;
     }

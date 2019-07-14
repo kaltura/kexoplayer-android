@@ -21,7 +21,7 @@ import android.media.MediaDrm;
 import android.media.MediaDrmException;
 import android.media.NotProvisionedException;
 import android.os.Handler;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.drm.DrmInitData.SchemeData;
 import java.util.HashMap;
 import java.util.List;
@@ -265,9 +265,11 @@ public interface ExoMediaDrm<T extends ExoMediaCrypto> {
 
   /**
    * @see android.media.MediaCrypto#MediaCrypto(UUID, byte[])
-   * @param sessionId The DRM session ID.
+   *
+   * @param initData Opaque initialization data specific to the crypto scheme.
    * @return An object extends {@link ExoMediaCrypto}, using opaque crypto scheme specific data.
    * @throws MediaCryptoException If the instance can't be created.
    */
-  T createMediaCrypto(byte[] sessionId) throws MediaCryptoException;
+  T createMediaCrypto(byte[] initData) throws MediaCryptoException;
+
 }

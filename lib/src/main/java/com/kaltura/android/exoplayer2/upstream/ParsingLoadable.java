@@ -16,7 +16,7 @@
 package com.kaltura.android.exoplayer2.upstream;
 
 import android.net.Uri;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.ParserException;
 import com.kaltura.android.exoplayer2.upstream.Loader.Loadable;
@@ -70,24 +70,6 @@ public final class ParsingLoadable<T> implements Loadable {
   }
 
   /**
-   * Loads a single parsable object.
-   *
-   * @param dataSource The {@link DataSource} through which the object should be read.
-   * @param parser The {@link Parser} to parse the object from the response.
-   * @param dataSpec The {@link DataSpec} of the object to read.
-   * @param type The type of the data. One of the {@link C}{@code DATA_TYPE_*} constants.
-   * @return The parsed object
-   * @throws IOException Thrown if there is an error while loading or parsing.
-   */
-  public static <T> T load(
-      DataSource dataSource, Parser<? extends T> parser, DataSpec dataSpec, int type)
-      throws IOException {
-    ParsingLoadable<T> loadable = new ParsingLoadable<>(dataSource, dataSpec, type, parser);
-    loadable.load();
-    return Assertions.checkNotNull(loadable.getResult());
-  }
-
-  /**
    * The {@link DataSpec} that defines the data to be loaded.
    */
   public final DataSpec dataSpec;
@@ -109,7 +91,11 @@ public final class ParsingLoadable<T> implements Loadable {
    * @param parser Parses the object from the response.
    */
   public ParsingLoadable(DataSource dataSource, Uri uri, int type, Parser<? extends T> parser) {
-    this(dataSource, new DataSpec(uri, DataSpec.FLAG_ALLOW_GZIP), type, parser);
+    this(
+        dataSource,
+        new DataSpec(uri, DataSpec.FLAG_ALLOW_GZIP | DataSpec.FLAG_ALLOW_CACHING_UNKNOWN_LENGTH),
+        type,
+        parser);
   }
 
   /**

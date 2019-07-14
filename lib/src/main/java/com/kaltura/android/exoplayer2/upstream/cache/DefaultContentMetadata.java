@@ -15,8 +15,11 @@
  */
 package com.kaltura.android.exoplayer2.upstream.cache;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -25,7 +28,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 /** Default implementation of {@link ContentMetadata}. Values are stored as byte arrays. */
 public final class DefaultContentMetadata implements ContentMetadata {
@@ -34,16 +36,35 @@ public final class DefaultContentMetadata implements ContentMetadata {
   public static final DefaultContentMetadata EMPTY =
       new DefaultContentMetadata(Collections.emptyMap());
 
+  private static final int MAX_VALUE_LENGTH = 10 * 1024 * 1024;
   private int hashCode;
+
+  /**
+   * Deserializes a {@link DefaultContentMetadata} from the given input stream.
+   *
+   * @param input Input stream to read from.
+   * @return a {@link DefaultContentMetadata} instance.
+   * @throws IOException If an error occurs during reading from input.
+   */
+  public static DefaultContentMetadata readFromStream(DataInputStream input) throws IOException {
+    int size = input.readInt();
+    HashMap<String, byte[]> metadata = new HashMap<>();
+    for (int i = 0; i < size; i++) {
+      String name = input.readUTF();
+      int valueSize = input.readInt();
+      if (valueSize < 0 || valueSize > MAX_VALUE_LENGTH) {
+        throw new IOException("Invalid value size: " + valueSize);
+      }
+      byte[] value = new byte[valueSize];
+      input.readFully(value);
+      metadata.put(name, value);
+    }
+    return new DefaultContentMetadata(metadata);
+  }
 
   private final Map<String, byte[]> metadata;
 
-  public DefaultContentMetadata() {
-    this(Collections.emptyMap());
-  }
-
-  /** @param metadata The metadata entries in their raw byte array form. */
-  public DefaultContentMetadata(Map<String, byte[]> metadata) {
+  private DefaultContentMetadata(Map<String, byte[]> metadata) {
     this.metadata = Collections.unmodifiableMap(metadata);
   }
 
@@ -53,20 +74,30 @@ public final class DefaultContentMetadata implements ContentMetadata {
    */
   public DefaultContentMetadata copyWithMutationsApplied(ContentMetadataMutations mutations) {
     Map<String, byte[]> mutatedMetadata = applyMutations(metadata, mutations);
-    if (isMetadataEqual(metadata, mutatedMetadata)) {
+    if (isMetadataEqual(mutatedMetadata)) {
       return this;
     }
     return new DefaultContentMetadata(mutatedMetadata);
   }
 
-  /** Returns the set of metadata entries in their raw byte array form. */
-  public Set<Entry<String, byte[]>> entrySet() {
-    return metadata.entrySet();
+  /**
+   * Serializes itself to a {@link DataOutputStream}.
+   *
+   * @param output Output stream to store the values.
+   * @throws IOException If an error occurs during writing values to output.
+   */
+  public void writeToStream(DataOutputStream output) throws IOException {
+    output.writeInt(metadata.size());
+    for (Entry<String, byte[]> entry : metadata.entrySet()) {
+      output.writeUTF(entry.getKey());
+      byte[] value = entry.getValue();
+      output.writeInt(value.length);
+      output.write(value);
+    }
   }
 
   @Override
-  @Nullable
-  public final byte[] get(String name, @Nullable byte[] defaultValue) {
+  public final byte[] get(String name, byte[] defaultValue) {
     if (metadata.containsKey(name)) {
       byte[] bytes = metadata.get(name);
       return Arrays.copyOf(bytes, bytes.length);
@@ -76,8 +107,7 @@ public final class DefaultContentMetadata implements ContentMetadata {
   }
 
   @Override
-  @Nullable
-  public final String get(String name, @Nullable String defaultValue) {
+  public final String get(String name, String defaultValue) {
     if (metadata.containsKey(name)) {
       byte[] bytes = metadata.get(name);
       return new String(bytes, Charset.forName(C.UTF8_NAME));
@@ -109,7 +139,21 @@ public final class DefaultContentMetadata implements ContentMetadata {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    return isMetadataEqual(metadata, ((DefaultContentMetadata) o).metadata);
+    return isMetadataEqual(((DefaultContentMetadata) o).metadata);
+  }
+
+  private boolean isMetadataEqual(Map<String, byte[]> otherMetadata) {
+    if (metadata.size() != otherMetadata.size()) {
+      return false;
+    }
+    for (Entry<String, byte[]> entry : metadata.entrySet()) {
+      byte[] value = entry.getValue();
+      byte[] otherValue = otherMetadata.get(entry.getKey());
+      if (!Arrays.equals(value, otherValue)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
@@ -122,20 +166,6 @@ public final class DefaultContentMetadata implements ContentMetadata {
       hashCode = result;
     }
     return hashCode;
-  }
-
-  private static boolean isMetadataEqual(Map<String, byte[]> first, Map<String, byte[]> second) {
-    if (first.size() != second.size()) {
-      return false;
-    }
-    for (Entry<String, byte[]> entry : first.entrySet()) {
-      byte[] value = entry.getValue();
-      byte[] otherValue = second.get(entry.getKey());
-      if (!Arrays.equals(value, otherValue)) {
-        return false;
-      }
-    }
-    return true;
   }
 
   private static Map<String, byte[]> applyMutations(
@@ -154,7 +184,18 @@ public final class DefaultContentMetadata implements ContentMetadata {
 
   private static void addValues(HashMap<String, byte[]> metadata, Map<String, Object> values) {
     for (String name : values.keySet()) {
-      metadata.put(name, getBytes(values.get(name)));
+      Object value = values.get(name);
+      byte[] bytes = getBytes(value);
+      if (bytes.length > MAX_VALUE_LENGTH) {
+        throw new IllegalArgumentException(
+            "The size of "
+                + name
+                + " ("
+                + bytes.length
+                + ") is greater than maximum allowed: "
+                + MAX_VALUE_LENGTH);
+      }
+      metadata.put(name, bytes);
     }
   }
 

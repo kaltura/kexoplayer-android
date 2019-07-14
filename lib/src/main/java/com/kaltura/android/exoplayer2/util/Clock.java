@@ -17,7 +17,7 @@ package com.kaltura.android.exoplayer2.util;
 
 import android.os.Handler;
 import android.os.Looper;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 
 /**
  * An interface through which system clocks can be read and {@link HandlerWrapper}s created. The

@@ -19,7 +19,7 @@ import android.os.Handler;
 import android.os.Handler.Callback;
 import android.os.Looper;
 import android.os.Message;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.BaseRenderer;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.ExoPlaybackException;

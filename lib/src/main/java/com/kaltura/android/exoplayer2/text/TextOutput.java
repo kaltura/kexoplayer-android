@@ -25,7 +25,8 @@ public interface TextOutput {
   /**
    * Called when there is a change in the {@link Cue}s.
    *
-   * @param cues The {@link Cue}s. May be empty.
+   * @param cues The {@link Cue}s.
    */
   void onCues(List<Cue> cues);
+
 }

@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.video;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.ParserException;
 import com.kaltura.android.exoplayer2.util.NalUnitUtil;
 import com.kaltura.android.exoplayer2.util.ParsableByteArray;

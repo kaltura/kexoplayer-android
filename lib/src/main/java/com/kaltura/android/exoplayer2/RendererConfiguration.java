@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 
 /**
  * The configuration of a {@link Renderer}.

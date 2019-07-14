@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.extractor.ts;
 
-import androidx.annotation.IntDef;
+import android.support.annotation.IntDef;
 import android.util.SparseArray;
 import com.kaltura.android.exoplayer2.Format;
 import com.kaltura.android.exoplayer2.extractor.ts.TsPayloadReader.EsInfo;
@@ -38,8 +38,7 @@ public final class DefaultTsPayloadReaderFactory implements TsPayloadReader.Fact
    * Flags controlling elementary stream readers' behavior. Possible flag values are {@link
    * #FLAG_ALLOW_NON_IDR_KEYFRAMES}, {@link #FLAG_IGNORE_AAC_STREAM}, {@link
    * #FLAG_IGNORE_H264_STREAM}, {@link #FLAG_DETECT_ACCESS_UNITS}, {@link
-   * #FLAG_IGNORE_SPLICE_INFO_STREAM}, {@link #FLAG_OVERRIDE_CAPTION_DESCRIPTORS} and {@link
-   * #FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS}.
+   * #FLAG_IGNORE_SPLICE_INFO_STREAM} and {@link #FLAG_OVERRIDE_CAPTION_DESCRIPTORS}.
    */
   @Documented
   @Retention(RetentionPolicy.SOURCE)
@@ -52,7 +51,7 @@ public final class DefaultTsPayloadReaderFactory implements TsPayloadReader.Fact
         FLAG_DETECT_ACCESS_UNITS,
         FLAG_IGNORE_SPLICE_INFO_STREAM,
         FLAG_OVERRIDE_CAPTION_DESCRIPTORS,
-        FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS
+        FLAG_IGNORE_HDMV_DTS_STREAM
       })
   public @interface Flags {}
 
@@ -89,10 +88,11 @@ public final class DefaultTsPayloadReaderFactory implements TsPayloadReader.Fact
    */
   public static final int FLAG_OVERRIDE_CAPTION_DESCRIPTORS = 1 << 5;
   /**
-   * Sets whether HDMV DTS audio streams will be handled. If this flag is set, SCTE subtitles will
-   * not be detected, as they share the same elementary stream type as HDMV DTS.
+   * Prevents the creation of {@link DtsReader} instances when receiving {@link
+   * TsExtractor#TS_STREAM_TYPE_HDMV_DTS} as stream type. Enabling this flag prevents a stream type
+   * collision between HDMV DTS audio and SCTE-35 subtitles.
    */
-  public static final int FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS = 1 << 6;
+  public static final int FLAG_IGNORE_HDMV_DTS_STREAM = 1 << 6;
 
   private static final int DESCRIPTOR_TAG_CAPTION_SERVICE = 0x86;
 
@@ -149,10 +149,8 @@ public final class DefaultTsPayloadReaderFactory implements TsPayloadReader.Fact
       case TsExtractor.TS_STREAM_TYPE_AC3:
       case TsExtractor.TS_STREAM_TYPE_E_AC3:
         return new PesReader(new Ac3Reader(esInfo.language));
-      case TsExtractor.TS_STREAM_TYPE_AC4:
-        return new PesReader(new Ac4Reader(esInfo.language));
       case TsExtractor.TS_STREAM_TYPE_HDMV_DTS:
-        if (!isSet(FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS)) {
+        if (isSet(FLAG_IGNORE_HDMV_DTS_STREAM)) {
           return null;
         }
         // Fall through.

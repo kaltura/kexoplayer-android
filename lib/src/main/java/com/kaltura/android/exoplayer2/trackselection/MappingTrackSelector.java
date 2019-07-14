@@ -15,16 +15,14 @@
  */
 package com.kaltura.android.exoplayer2.trackselection;
 
-import androidx.annotation.IntDef;
-import androidx.annotation.Nullable;
+import android.support.annotation.IntDef;
+import android.support.annotation.Nullable;
 import android.util.Pair;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.ExoPlaybackException;
 import com.kaltura.android.exoplayer2.Renderer;
 import com.kaltura.android.exoplayer2.RendererCapabilities;
 import com.kaltura.android.exoplayer2.RendererConfiguration;
-import com.kaltura.android.exoplayer2.Timeline;
-import com.kaltura.android.exoplayer2.source.MediaSource.MediaPeriodId;
 import com.kaltura.android.exoplayer2.source.TrackGroup;
 import com.kaltura.android.exoplayer2.source.TrackGroupArray;
 import com.kaltura.android.exoplayer2.util.Util;
@@ -330,12 +328,8 @@ public abstract class MappingTrackSelector extends TrackSelector {
   }
 
   @Override
-  public final TrackSelectorResult selectTracks(
-      RendererCapabilities[] rendererCapabilities,
-      TrackGroupArray trackGroups,
-      MediaPeriodId periodId,
-      Timeline timeline)
-      throws ExoPlaybackException {
+  public final TrackSelectorResult selectTracks(RendererCapabilities[] rendererCapabilities,
+      TrackGroupArray trackGroups) throws ExoPlaybackException {
     // Structures into which data will be written during the selection. The extra item at the end
     // of each array is to store data associated with track groups that cannot be associated with
     // any renderer.

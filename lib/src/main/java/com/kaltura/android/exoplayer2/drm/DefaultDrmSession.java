@@ -22,25 +22,20 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import android.util.Pair;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.drm.DrmInitData.SchemeData;
 import com.kaltura.android.exoplayer2.drm.ExoMediaDrm.KeyRequest;
 import com.kaltura.android.exoplayer2.drm.ExoMediaDrm.ProvisionRequest;
-import com.kaltura.android.exoplayer2.util.Assertions;
 import com.kaltura.android.exoplayer2.util.EventDispatcher;
 import com.kaltura.android.exoplayer2.util.Log;
-import com.kaltura.android.exoplayer2.util.Util;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.RequiresNonNull;
 
 /**
  * A {@link DrmSession} that supports playbacks using {@link ExoMediaDrm}.
@@ -89,7 +84,7 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
   private final ExoMediaDrm<T> mediaDrm;
   private final ProvisioningManager<T> provisioningManager;
   private final @DefaultDrmSessionManager.Mode int mode;
-  private final @Nullable HashMap<String, String> optionalKeyRequestParameters;
+  private final HashMap<String, String> optionalKeyRequestParameters;
   private final EventDispatcher<DefaultDrmSessionEventListener> eventDispatcher;
   private final int initialDrmRequestRetryCount;
 
@@ -101,13 +96,13 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
   private int openCount;
   private HandlerThread requestHandlerThread;
   private PostRequestHandler postRequestHandler;
-  private @Nullable T mediaCrypto;
-  private @Nullable DrmSessionException lastException;
-  private byte @MonotonicNonNull [] sessionId;
-  private byte @MonotonicNonNull [] offlineLicenseKeySetId;
+  private T mediaCrypto;
+  private DrmSessionException lastException;
+  private byte[] sessionId;
+  private @Nullable byte[] offlineLicenseKeySetId;
 
-  private @Nullable KeyRequest currentKeyRequest;
-  private @Nullable ProvisionRequest currentProvisionRequest;
+  private KeyRequest currentKeyRequest;
+  private ProvisionRequest currentProvisionRequest;
 
   /**
    * Instantiates a new DRM session.
@@ -134,25 +129,18 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
       @Nullable List<SchemeData> schemeDatas,
       @DefaultDrmSessionManager.Mode int mode,
       @Nullable byte[] offlineLicenseKeySetId,
-      @Nullable HashMap<String, String> optionalKeyRequestParameters,
+      HashMap<String, String> optionalKeyRequestParameters,
       MediaDrmCallback callback,
       Looper playbackLooper,
       EventDispatcher<DefaultDrmSessionEventListener> eventDispatcher,
       int initialDrmRequestRetryCount) {
-    if (mode == DefaultDrmSessionManager.MODE_QUERY
-        || mode == DefaultDrmSessionManager.MODE_RELEASE) {
-      Assertions.checkNotNull(offlineLicenseKeySetId);
-    }
     this.uuid = uuid;
     this.provisioningManager = provisioningManager;
     this.mediaDrm = mediaDrm;
     this.mode = mode;
-    if (offlineLicenseKeySetId != null) {
-      this.offlineLicenseKeySetId = offlineLicenseKeySetId;
-      this.schemeDatas = null;
-    } else {
-      this.schemeDatas = Collections.unmodifiableList(Assertions.checkNotNull(schemeDatas));
-    }
+    this.offlineLicenseKeySetId = offlineLicenseKeySetId;
+    this.schemeDatas =
+        offlineLicenseKeySetId == null ? Collections.unmodifiableList(schemeDatas) : null;
     this.optionalKeyRequestParameters = optionalKeyRequestParameters;
     this.callback = callback;
     this.initialDrmRequestRetryCount = initialDrmRequestRetryCount;
@@ -178,9 +166,9 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
     }
   }
 
-  /** @return True if the session is closed and cleaned up, false otherwise. */
-  // Assigning null to various non-null variables for clean-up. Class won't be used after release.
-  @SuppressWarnings("assignment.type.incompatible")
+  /**
+   * @return True if the session is closed and cleaned up, false otherwise.
+   */
   public boolean release() {
     if (--openCount == 0) {
       state = STATE_RELEASED;
@@ -207,10 +195,24 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
     return Arrays.equals(this.sessionId, sessionId);
   }
 
+  @SuppressWarnings("deprecation")
   public void onMediaDrmEvent(int what) {
+    if (!isOpen()) {
+      return;
+    }
     switch (what) {
       case ExoMediaDrm.EVENT_KEY_REQUIRED:
-        onKeysRequired();
+        doLicense(false);
+        break;
+      case ExoMediaDrm.EVENT_KEY_EXPIRED:
+        // When an already expired key is loaded MediaDrm sends this event immediately. Ignore
+        // this event if the state isn't STATE_OPENED_WITH_KEYS yet which means we're still
+        // waiting for key response.
+        onKeysExpired();
+        break;
+      case ExoMediaDrm.EVENT_PROVISION_REQUIRED:
+        state = STATE_OPENED;
+        provisioningManager.provisionRequired(this);
         break;
       default:
         break;
@@ -243,35 +245,33 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
   }
 
   @Override
-  public final @Nullable DrmSessionException getError() {
+  public final DrmSessionException getError() {
     return state == STATE_ERROR ? lastException : null;
   }
 
   @Override
-  public final @Nullable T getMediaCrypto() {
+  public final T getMediaCrypto() {
     return mediaCrypto;
   }
 
   @Override
-  public @Nullable Map<String, String> queryKeyStatus() {
+  public Map<String, String> queryKeyStatus() {
     return sessionId == null ? null : mediaDrm.queryKeyStatus(sessionId);
   }
 
   @Override
-  public @Nullable byte[] getOfflineLicenseKeySetId() {
+  public byte[] getOfflineLicenseKeySetId() {
     return offlineLicenseKeySetId;
   }
 
   // Internal methods.
 
   /**
-   * Try to open a session, do provisioning if necessary.
-   *
-   * @param allowProvisioning if provisioning is allowed, set this to false when calling from
-   *     processing provision response.
-   * @return true on success, false otherwise.
+   *  Try to open a session, do provisioning if necessary.
+   *  @param allowProvisioning if provisioning is allowed, set this to false when calling from
+   *      processing provision response.
+   *  @return true on success, false otherwise.
    */
-  @EnsuresNonNullIf(result = true, expression = "sessionId")
   private boolean openInternal(boolean allowProvisioning) {
     if (isOpen()) {
       // Already opened
@@ -319,20 +319,19 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
     provisioningManager.onProvisionCompleted();
   }
 
-  @RequiresNonNull("sessionId")
   private void doLicense(boolean allowRetry) {
     switch (mode) {
       case DefaultDrmSessionManager.MODE_PLAYBACK:
       case DefaultDrmSessionManager.MODE_QUERY:
         if (offlineLicenseKeySetId == null) {
-          postKeyRequest(sessionId, ExoMediaDrm.KEY_TYPE_STREAMING, allowRetry);
+          postKeyRequest(ExoMediaDrm.KEY_TYPE_STREAMING, allowRetry);
         } else if (state == STATE_OPENED_WITH_KEYS || restoreKeys()) {
           long licenseDurationRemainingSec = getLicenseDurationRemainingSec();
           if (mode == DefaultDrmSessionManager.MODE_PLAYBACK
               && licenseDurationRemainingSec <= MAX_LICENSE_DURATION_TO_RENEW) {
             Log.d(TAG, "Offline license has expired or will expire soon. "
                 + "Remaining seconds: " + licenseDurationRemainingSec);
-            postKeyRequest(sessionId, ExoMediaDrm.KEY_TYPE_OFFLINE, allowRetry);
+            postKeyRequest(ExoMediaDrm.KEY_TYPE_OFFLINE, allowRetry);
           } else if (licenseDurationRemainingSec <= 0) {
             onError(new KeysExpiredException());
           } else {
@@ -343,20 +342,19 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
         break;
       case DefaultDrmSessionManager.MODE_DOWNLOAD:
         if (offlineLicenseKeySetId == null) {
-          postKeyRequest(sessionId, ExoMediaDrm.KEY_TYPE_OFFLINE, allowRetry);
+          postKeyRequest(ExoMediaDrm.KEY_TYPE_OFFLINE, allowRetry);
         } else {
           // Renew
           if (restoreKeys()) {
-            postKeyRequest(sessionId, ExoMediaDrm.KEY_TYPE_OFFLINE, allowRetry);
+            postKeyRequest(ExoMediaDrm.KEY_TYPE_OFFLINE, allowRetry);
           }
         }
         break;
       case DefaultDrmSessionManager.MODE_RELEASE:
-        Assertions.checkNotNull(offlineLicenseKeySetId);
         // It's not necessary to restore the key (and open a session to do that) before releasing it
         // but this serves as a good sanity/fast-failure check.
         if (restoreKeys()) {
-          postKeyRequest(offlineLicenseKeySetId, ExoMediaDrm.KEY_TYPE_RELEASE, allowRetry);
+          postKeyRequest(ExoMediaDrm.KEY_TYPE_RELEASE, allowRetry);
         }
         break;
       default:
@@ -364,7 +362,6 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
     }
   }
 
-  @RequiresNonNull({"sessionId", "offlineLicenseKeySetId"})
   private boolean restoreKeys() {
     try {
       mediaDrm.restoreKeys(sessionId, offlineLicenseKeySetId);
@@ -380,12 +377,12 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
     if (!C.WIDEVINE_UUID.equals(uuid)) {
       return Long.MAX_VALUE;
     }
-    Pair<Long, Long> pair =
-        Assertions.checkNotNull(WidevineUtil.getLicenseDurationRemainingSec(this));
+    Pair<Long, Long> pair = WidevineUtil.getLicenseDurationRemainingSec(this);
     return Math.min(pair.first, pair.second);
   }
 
-  private void postKeyRequest(byte[] scope, int type, boolean allowRetry) {
+  private void postKeyRequest(int type, boolean allowRetry) {
+    byte[] scope = type == ExoMediaDrm.KEY_TYPE_RELEASE ? offlineLicenseKeySetId : sessionId;
     try {
       currentKeyRequest =
           mediaDrm.getKeyRequest(scope, schemeDatas, type, optionalKeyRequestParameters);
@@ -410,7 +407,7 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
     try {
       byte[] responseData = (byte[]) response;
       if (mode == DefaultDrmSessionManager.MODE_RELEASE) {
-        mediaDrm.provideKeyResponse(Util.castNonNull(offlineLicenseKeySetId), responseData);
+        mediaDrm.provideKeyResponse(offlineLicenseKeySetId, responseData);
         eventDispatcher.dispatch(DefaultDrmSessionEventListener::onDrmKeysRestored);
       } else {
         byte[] keySetId = mediaDrm.provideKeyResponse(sessionId, responseData);
@@ -427,10 +424,10 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
     }
   }
 
-  private void onKeysRequired() {
-    if (mode == DefaultDrmSessionManager.MODE_PLAYBACK && state == STATE_OPENED_WITH_KEYS) {
-      Util.castNonNull(sessionId);
-      doLicense(/* allowRetry= */ false);
+  private void onKeysExpired() {
+    if (state == STATE_OPENED_WITH_KEYS) {
+      state = STATE_OPENED;
+      onError(new KeysExpiredException());
     }
   }
 
@@ -450,8 +447,6 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
     }
   }
 
-  @EnsuresNonNullIf(result = true, expression = "sessionId")
-  @SuppressWarnings("contracts.conditional.postcondition.not.satisfied")
   private boolean isOpen() {
     return state == STATE_OPENED || state == STATE_OPENED_WITH_KEYS;
   }
@@ -466,9 +461,8 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void handleMessage(Message msg) {
-      Pair<Object, Object> requestAndResponse = (Pair<Object, Object>) msg.obj;
+      Pair<?, ?> requestAndResponse = (Pair<?, ?>) msg.obj;
       Object request = requestAndResponse.first;
       Object response = requestAndResponse.second;
       switch (msg.what) {

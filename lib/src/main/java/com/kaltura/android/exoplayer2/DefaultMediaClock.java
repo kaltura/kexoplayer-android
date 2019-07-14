@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.util.Clock;
 import com.kaltura.android.exoplayer2.util.MediaClock;
 import com.kaltura.android.exoplayer2.util.StandaloneMediaClock;

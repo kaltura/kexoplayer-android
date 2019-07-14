@@ -17,7 +17,7 @@ package com.kaltura.android.exoplayer2.source;
 
 import android.os.Parcel;
 import android.os.Parcelable;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import java.util.Arrays;
 

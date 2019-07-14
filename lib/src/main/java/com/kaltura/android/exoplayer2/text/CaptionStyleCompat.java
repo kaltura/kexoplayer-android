@@ -18,7 +18,7 @@ package com.kaltura.android.exoplayer2.text;
 import android.annotation.TargetApi;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import androidx.annotation.IntDef;
+import android.support.annotation.IntDef;
 import android.view.accessibility.CaptioningManager;
 import android.view.accessibility.CaptioningManager.CaptionStyle;
 import com.kaltura.android.exoplayer2.util.Util;

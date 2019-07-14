@@ -16,7 +16,7 @@
 package com.kaltura.android.exoplayer2.audio;
 
 import android.annotation.TargetApi;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 
 /**

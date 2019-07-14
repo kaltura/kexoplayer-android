@@ -16,7 +16,7 @@
 package com.kaltura.android.exoplayer2.text.ttml;
 
 import android.graphics.Typeface;
-import androidx.annotation.IntDef;
+import android.support.annotation.IntDef;
 import android.text.Layout;
 import com.kaltura.android.exoplayer2.util.Assertions;
 import java.lang.annotation.Documented;

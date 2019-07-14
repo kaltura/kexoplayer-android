@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.upstream;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 
 /**
  * A {@link DataSource.Factory} that produces {@link FileDataSource}.

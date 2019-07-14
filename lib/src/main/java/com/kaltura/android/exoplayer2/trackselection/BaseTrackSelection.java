@@ -16,7 +16,7 @@
 package com.kaltura.android.exoplayer2.trackselection;
 
 import android.os.SystemClock;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.Format;
 import com.kaltura.android.exoplayer2.source.TrackGroup;

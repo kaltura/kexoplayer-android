@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.source.chunk;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import android.util.SparseArray;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.Format;

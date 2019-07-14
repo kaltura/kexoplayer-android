@@ -15,12 +15,14 @@
  */
 package com.kaltura.android.exoplayer2.drm;
 
+import android.annotation.TargetApi;
 import android.os.Looper;
 import com.kaltura.android.exoplayer2.drm.DrmInitData.SchemeData;
 
 /**
  * Manages a DRM session.
  */
+@TargetApi(16)
 public interface DrmSessionManager<T extends ExoMediaCrypto> {
 
   /**

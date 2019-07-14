@@ -15,14 +15,12 @@
  */
 package com.kaltura.android.exoplayer2.source.hls;
 
-import android.net.Uri;
 import android.os.Handler;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.Format;
 import com.kaltura.android.exoplayer2.FormatHolder;
 import com.kaltura.android.exoplayer2.decoder.DecoderInputBuffer;
-import com.kaltura.android.exoplayer2.drm.DrmInitData;
 import com.kaltura.android.exoplayer2.extractor.DummyTrackOutput;
 import com.kaltura.android.exoplayer2.extractor.ExtractorOutput;
 import com.kaltura.android.exoplayer2.extractor.SeekMap;
@@ -38,6 +36,8 @@ import com.kaltura.android.exoplayer2.source.TrackGroup;
 import com.kaltura.android.exoplayer2.source.TrackGroupArray;
 import com.kaltura.android.exoplayer2.source.chunk.Chunk;
 import com.kaltura.android.exoplayer2.source.chunk.MediaChunkIterator;
+import com.kaltura.android.exoplayer2.source.hls.playlist.HlsMasterPlaylist;
+import com.kaltura.android.exoplayer2.source.hls.playlist.HlsMasterPlaylist.HlsUrl;
 import com.kaltura.android.exoplayer2.trackselection.TrackSelection;
 import com.kaltura.android.exoplayer2.upstream.Allocator;
 import com.kaltura.android.exoplayer2.upstream.LoadErrorHandlingPolicy;
@@ -52,7 +52,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Loads {@link HlsMediaChunk}s obtained from a {@link HlsChunkSource}, and provides
@@ -68,9 +67,6 @@ import java.util.Map;
 
     /**
      * Called when the wrapper has been prepared.
-     *
-     * <p>Note: This method will be called on a later handler loop than the one on which either
-     * {@link #prepareWithMasterPlaylistInfo} or {@link #continuePreparing} are invoked.
      */
     void onPrepared();
 
@@ -78,7 +74,8 @@ import java.util.Map;
      * Called to schedule a {@link #continueLoading(long)} call when the playlist referred by the
      * given url changes.
      */
-    void onPlaylistRefreshRequired(Uri playlistUrl);
+    void onPlaylistRefreshRequired(HlsMasterPlaylist.HlsUrl playlistUrl);
+
   }
 
   private static final String TAG = "HlsSampleStreamWrapper";
@@ -102,7 +99,6 @@ import java.util.Map;
   private final Runnable onTracksEndedRunnable;
   private final Handler handler;
   private final ArrayList<HlsSampleStream> hlsSampleStreams;
-  private final Map<String, DrmInitData> overridingDrmInitData;
 
   private SampleQueue[] sampleQueues;
   private int[] sampleQueueTrackIds;
@@ -145,10 +141,6 @@ import java.util.Map;
    * @param trackType The type of the track. One of the {@link C} {@code TRACK_TYPE_*} constants.
    * @param callback A callback for the wrapper.
    * @param chunkSource A {@link HlsChunkSource} from which chunks to load are obtained.
-   * @param overridingDrmInitData Overriding {@link DrmInitData}, keyed by protection scheme type
-   *     (i.e. {@link DrmInitData#schemeType}). If the stream has {@link DrmInitData} and uses a
-   *     protection scheme type for which overriding {@link DrmInitData} is provided, then the
-   *     stream's {@link DrmInitData} will be overridden.
    * @param allocator An {@link Allocator} from which to obtain media buffer allocations.
    * @param positionUs The position from which to start loading media.
    * @param muxedAudioFormat Optional muxed audio {@link Format} as defined by the master playlist.
@@ -159,7 +151,6 @@ import java.util.Map;
       int trackType,
       Callback callback,
       HlsChunkSource chunkSource,
-      Map<String, DrmInitData> overridingDrmInitData,
       Allocator allocator,
       long positionUs,
       Format muxedAudioFormat,
@@ -168,7 +159,6 @@ import java.util.Map;
     this.trackType = trackType;
     this.callback = callback;
     this.chunkSource = chunkSource;
-    this.overridingDrmInitData = overridingDrmInitData;
     this.allocator = allocator;
     this.muxedAudioFormat = muxedAudioFormat;
     this.loadErrorHandlingPolicy = loadErrorHandlingPolicy;
@@ -213,7 +203,7 @@ import java.util.Map;
     this.trackGroups = trackGroups;
     this.optionalTrackGroups = optionalTrackGroups;
     this.primaryTrackGroupIndex = primaryTrackGroupIndex;
-    handler.post(callback::onPrepared);
+    callback.onPrepared();
   }
 
   public void maybeThrowPrepareError() throws IOException {
@@ -222,10 +212,6 @@ import java.util.Map;
 
   public TrackGroupArray getTrackGroups() {
     return trackGroups;
-  }
-
-  public int getPrimaryTrackGroupIndex() {
-    return primaryTrackGroupIndex;
   }
 
   public int bindSampleQueueToSampleStream(int trackGroupIndex) {
@@ -322,7 +308,6 @@ import java.util.Map;
     if (enabledTrackGroupCount == 0) {
       chunkSource.reset();
       downstreamTrackFormat = null;
-      pendingResetUpstreamFormats = true;
       mediaChunks.clear();
       if (loader.isLoading()) {
         if (sampleQueuesBuilt) {
@@ -450,8 +435,8 @@ import java.util.Map;
     chunkSource.setIsTimestampMaster(isTimestampMaster);
   }
 
-  public boolean onPlaylistError(Uri playlistUrl, long blacklistDurationMs) {
-    return chunkSource.onPlaylistError(playlistUrl, blacklistDurationMs);
+  public boolean onPlaylistError(HlsUrl url, long blacklistDurationMs) {
+    return chunkSource.onPlaylistError(url, blacklistDurationMs);
   }
 
   // SampleStream implementation.
@@ -492,28 +477,18 @@ import java.util.Map;
     int result =
         sampleQueues[sampleQueueIndex].read(
             formatHolder, buffer, requireFormat, loadingFinished, lastSeekPositionUs);
-    if (result == C.RESULT_FORMAT_READ) {
-      Format format = formatHolder.format;
-      if (sampleQueueIndex == primarySampleQueueIndex) {
-        // Fill in primary sample format with information from the track format.
-        int chunkUid = sampleQueues[sampleQueueIndex].peekSourceId();
-        int chunkIndex = 0;
-        while (chunkIndex < mediaChunks.size() && mediaChunks.get(chunkIndex).uid != chunkUid) {
-          chunkIndex++;
-        }
-        Format trackFormat =
-            chunkIndex < mediaChunks.size()
-                ? mediaChunks.get(chunkIndex).trackFormat
-                : upstreamTrackFormat;
-        format = format.copyWithManifestFormatInfo(trackFormat);
+    if (result == C.RESULT_FORMAT_READ && sampleQueueIndex == primarySampleQueueIndex) {
+      // Fill in primary sample format with information from the track format.
+      int chunkUid = sampleQueues[sampleQueueIndex].peekSourceId();
+      int chunkIndex = 0;
+      while (chunkIndex < mediaChunks.size() && mediaChunks.get(chunkIndex).uid != chunkUid) {
+        chunkIndex++;
       }
-      if (format.drmInitData != null) {
-        DrmInitData drmInitData = overridingDrmInitData.get(format.drmInitData.schemeType);
-        if (drmInitData != null) {
-          format = format.copyWithDrmInitData(drmInitData);
-        }
-      }
-      formatHolder.format = format;
+      Format trackFormat =
+          chunkIndex < mediaChunks.size()
+              ? mediaChunks.get(chunkIndex).trackFormat
+              : upstreamTrackFormat;
+      formatHolder.format = formatHolder.format.copyWithManifestFormatInfo(trackFormat);
     }
     return result;
   }
@@ -589,7 +564,7 @@ import java.util.Map;
     chunkSource.getNextChunk(positionUs, loadPositionUs, chunkQueue, nextChunkHolder);
     boolean endOfStream = nextChunkHolder.endOfStream;
     Chunk loadable = nextChunkHolder.chunk;
-    Uri playlistUrlToLoad = nextChunkHolder.playlistUrl;
+    HlsMasterPlaylist.HlsUrl playlistToLoad = nextChunkHolder.playlist;
     nextChunkHolder.clear();
 
     if (endOfStream) {
@@ -599,8 +574,8 @@ import java.util.Map;
     }
 
     if (loadable == null) {
-      if (playlistUrlToLoad != null) {
-        callback.onPlaylistRefreshRequired(playlistUrlToLoad);
+      if (playlistToLoad != null) {
+        callback.onPlaylistRefreshRequired(playlistToLoad);
       }
       return false;
     }
@@ -1112,10 +1087,6 @@ import java.util.Map;
       return sampleFormat;
     }
     int bitrate = propagateBitrate ? playlistFormat.bitrate : Format.NO_VALUE;
-    int channelCount =
-        playlistFormat.channelCount != Format.NO_VALUE
-            ? playlistFormat.channelCount
-            : sampleFormat.channelCount;
     int sampleTrackType = MimeTypes.getTrackType(sampleFormat.sampleMimeType);
     String codecs = Util.getCodecsOfType(playlistFormat.codecs, sampleTrackType);
     String mimeType = MimeTypes.getMediaMimeType(codecs);
@@ -1127,11 +1098,9 @@ import java.util.Map;
         playlistFormat.label,
         mimeType,
         codecs,
-        playlistFormat.metadata,
         bitrate,
         playlistFormat.width,
         playlistFormat.height,
-        channelCount,
         playlistFormat.selectionFlags,
         playlistFormat.language);
   }

@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.source.ads;
 
-import androidx.annotation.VisibleForTesting;
+import android.support.annotation.VisibleForTesting;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.Timeline;
 import com.kaltura.android.exoplayer2.source.ForwardingTimeline;

@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.source;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.Format;
 import com.kaltura.android.exoplayer2.FormatHolder;
@@ -317,10 +317,8 @@ public class SampleQueue implements TrackOutput {
    *
    * @param formatHolder A {@link FormatHolder} to populate in the case of reading a format.
    * @param buffer A {@link DecoderInputBuffer} to populate in the case of reading a sample or the
-   *     end of the stream. If the end of the stream has been reached, the {@link
-   *     C#BUFFER_FLAG_END_OF_STREAM} flag will be set on the buffer. If a {@link
-   *     DecoderInputBuffer#isFlagsOnly() flags-only} buffer is passed, only the buffer flags may be
-   *     populated by this method and the read position of the queue will not change.
+   *     end of the stream. If the end of the stream has been reached, the
+   *     {@link C#BUFFER_FLAG_END_OF_STREAM} flag will be set on the buffer.
    * @param formatRequired Whether the caller requires that the format of the stream be read even if
    *     it's not changing. A sample will never be read if set to true, however it is still possible
    *     for the end of stream or nothing to be read.
@@ -330,12 +328,8 @@ public class SampleQueue implements TrackOutput {
    * @return The result, which can be {@link C#RESULT_NOTHING_READ}, {@link C#RESULT_FORMAT_READ} or
    *     {@link C#RESULT_BUFFER_READ}.
    */
-  public int read(
-      FormatHolder formatHolder,
-      DecoderInputBuffer buffer,
-      boolean formatRequired,
-      boolean loadingFinished,
-      long decodeOnlyUntilUs) {
+  public int read(FormatHolder formatHolder, DecoderInputBuffer buffer, boolean formatRequired,
+      boolean loadingFinished, long decodeOnlyUntilUs) {
     int result = metadataQueue.read(formatHolder, buffer, formatRequired, loadingFinished,
         downstreamFormat, extrasHolder);
     switch (result) {
@@ -347,15 +341,13 @@ public class SampleQueue implements TrackOutput {
           if (buffer.timeUs < decodeOnlyUntilUs) {
             buffer.addFlag(C.BUFFER_FLAG_DECODE_ONLY);
           }
-          if (!buffer.isFlagsOnly()) {
-            // Read encryption data if the sample is encrypted.
-            if (buffer.isEncrypted()) {
-              readEncryptionData(buffer, extrasHolder);
-            }
-            // Write the sample data into the holder.
-            buffer.ensureSpaceForWrite(extrasHolder.size);
-            readData(extrasHolder.offset, buffer.data, extrasHolder.size);
+          // Read encryption data if the sample is encrypted.
+          if (buffer.isEncrypted()) {
+            readEncryptionData(buffer, extrasHolder);
           }
+          // Write the sample data into the holder.
+          buffer.ensureSpaceForWrite(extrasHolder.size);
+          readData(extrasHolder.offset, buffer.data, extrasHolder.size);
         }
         return C.RESULT_BUFFER_READ;
       case C.RESULT_NOTHING_READ:

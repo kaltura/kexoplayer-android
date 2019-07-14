@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.audio;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.C.Encoding;
 import com.kaltura.android.exoplayer2.Format;
@@ -69,8 +69,7 @@ public final class SonicAudioProcessor implements AudioProcessor {
   private int outputSampleRateHz;
   private int pendingOutputSampleRateHz;
 
-  private boolean pendingSonicRecreation;
-  @Nullable private Sonic sonic;
+  private @Nullable Sonic sonic;
   private ByteBuffer buffer;
   private ShortBuffer shortBuffer;
   private ByteBuffer outputBuffer;
@@ -104,7 +103,7 @@ public final class SonicAudioProcessor implements AudioProcessor {
     speed = Util.constrainValue(speed, MINIMUM_SPEED, MAXIMUM_SPEED);
     if (this.speed != speed) {
       this.speed = speed;
-      pendingSonicRecreation = true;
+      sonic = null;
     }
     flush();
     return speed;
@@ -121,7 +120,7 @@ public final class SonicAudioProcessor implements AudioProcessor {
     pitch = Util.constrainValue(pitch, MINIMUM_PITCH, MAXIMUM_PITCH);
     if (this.pitch != pitch) {
       this.pitch = pitch;
-      pendingSonicRecreation = true;
+      sonic = null;
     }
     flush();
     return pitch;
@@ -173,7 +172,7 @@ public final class SonicAudioProcessor implements AudioProcessor {
     this.sampleRateHz = sampleRateHz;
     this.channelCount = channelCount;
     this.outputSampleRateHz = outputSampleRateHz;
-    pendingSonicRecreation = true;
+    sonic = null;
     return true;
   }
 
@@ -202,7 +201,7 @@ public final class SonicAudioProcessor implements AudioProcessor {
 
   @Override
   public void queueInput(ByteBuffer inputBuffer) {
-    Sonic sonic = Assertions.checkNotNull(this.sonic);
+    Assertions.checkState(sonic != null);
     if (inputBuffer.hasRemaining()) {
       ShortBuffer shortBuffer = inputBuffer.asShortBuffer();
       int inputSize = inputBuffer.remaining();
@@ -228,9 +227,8 @@ public final class SonicAudioProcessor implements AudioProcessor {
 
   @Override
   public void queueEndOfStream() {
-    if (sonic != null) {
-      sonic.queueEndOfStream();
-    }
+    Assertions.checkState(sonic != null);
+    sonic.queueEndOfStream();
     inputEnded = true;
   }
 
@@ -249,9 +247,9 @@ public final class SonicAudioProcessor implements AudioProcessor {
   @Override
   public void flush() {
     if (isActive()) {
-      if (pendingSonicRecreation) {
+      if (sonic == null) {
         sonic = new Sonic(sampleRateHz, channelCount, speed, pitch, outputSampleRateHz);
-      } else if (sonic != null) {
+      } else {
         sonic.flush();
       }
     }
@@ -272,7 +270,6 @@ public final class SonicAudioProcessor implements AudioProcessor {
     shortBuffer = buffer.asShortBuffer();
     outputBuffer = EMPTY_BUFFER;
     pendingOutputSampleRateHz = SAMPLE_RATE_NO_CHANGE;
-    pendingSonicRecreation = false;
     sonic = null;
     inputBytes = 0;
     outputBytes = 0;

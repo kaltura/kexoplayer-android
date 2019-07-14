@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.video.spherical;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.BaseRenderer;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.ExoPlaybackException;
@@ -72,12 +72,12 @@ public class CameraMotionRenderer extends BaseRenderer {
 
   @Override
   protected void onPositionReset(long positionUs, boolean joining) throws ExoPlaybackException {
-    resetListener();
+    reset();
   }
 
   @Override
   protected void onDisabled() {
-    resetListener();
+    reset();
   }
 
   @Override
@@ -124,7 +124,7 @@ public class CameraMotionRenderer extends BaseRenderer {
     return result;
   }
 
-  private void resetListener() {
+  private void reset() {
     lastTimestampUs = 0;
     if (listener != null) {
       listener.onCameraMotionReset();

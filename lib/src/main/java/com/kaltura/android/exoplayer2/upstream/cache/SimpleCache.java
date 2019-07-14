@@ -16,66 +16,37 @@
 package com.kaltura.android.exoplayer2.upstream.cache;
 
 import android.os.ConditionVariable;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
-import com.kaltura.android.exoplayer2.database.DatabaseIOException;
-import com.kaltura.android.exoplayer2.database.DatabaseProvider;
 import com.kaltura.android.exoplayer2.util.Assertions;
 import com.kaltura.android.exoplayer2.util.Log;
-import com.kaltura.android.exoplayer2.util.Util;
 import java.io.File;
-import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
- * A {@link Cache} implementation that maintains an in-memory representation.
- *
- * <p>Only one instance of SimpleCache is allowed for a given directory at a given time.
- *
- * <p>To delete a SimpleCache, use {@link #delete(File, DatabaseProvider)} rather than deleting the
- * directory and its contents directly. This is necessary to ensure that associated index data is
- * also removed.
+ * A {@link Cache} implementation that maintains an in-memory representation. Note, only one
+ * instance of SimpleCache is allowed for a given directory at a given time.
  */
 public final class SimpleCache implements Cache {
 
   private static final String TAG = "SimpleCache";
-  /**
-   * Cache files are distributed between a number of subdirectories. This helps to avoid poor
-   * performance in cases where the performance of the underlying file system (e.g. FAT32) scales
-   * badly with the number of files per directory. See
-   * https://github.com/google/ExoPlayer/issues/4253.
-   */
-  private static final int SUBDIRECTORY_COUNT = 10;
-
-  private static final String UID_FILE_SUFFIX = ".uid";
-
   private static final HashSet<File> lockedCacheDirs = new HashSet<>();
 
   private static boolean cacheFolderLockingDisabled;
-  private static boolean cacheInitializationExceptionsDisabled;
 
   private final File cacheDir;
   private final CacheEvictor evictor;
-  private final CachedContentIndex contentIndex;
-  @Nullable private final CacheFileMetadataIndex fileIndex;
+  private final CachedContentIndex index;
   private final HashMap<String, ArrayList<Listener>> listeners;
-  private final Random random;
-  private final boolean touchCacheSpans;
 
-  private long uid;
   private long totalSpace;
   private boolean released;
-  @MonotonicNonNull private CacheException initializationException;
 
   /**
    * Returns whether {@code cacheFolder} is locked by a {@link SimpleCache} instance. To unlock the
@@ -103,64 +74,12 @@ public final class SimpleCache implements Cache {
   }
 
   /**
-   * Disables throwing of cache initialization exceptions.
-   *
-   * @deprecated Don't use this. Provided for problematic upgrade cases only.
-   */
-  @Deprecated
-  public static void disableCacheInitializationExceptions() {
-    cacheInitializationExceptionsDisabled = true;
-  }
-
-  /**
-   * Deletes all content belonging to a cache instance.
-   *
-   * @param cacheDir The cache directory.
-   * @param databaseProvider The database in which index data is stored, or {@code null} if the
-   *     cache used a legacy index.
-   */
-  public static void delete(File cacheDir, @Nullable DatabaseProvider databaseProvider) {
-    if (!cacheDir.exists()) {
-      return;
-    }
-
-    File[] files = cacheDir.listFiles();
-    if (files == null) {
-      cacheDir.delete();
-      return;
-    }
-
-    if (databaseProvider != null) {
-      // Make a best effort to read the cache UID and delete associated index data before deleting
-      // cache directory itself.
-      long uid = loadUid(files);
-      if (uid != UID_UNSET) {
-        try {
-          CacheFileMetadataIndex.delete(databaseProvider, uid);
-        } catch (DatabaseIOException e) {
-          Log.w(TAG, "Failed to delete file metadata: " + uid);
-        }
-        try {
-          CachedContentIndex.delete(databaseProvider, uid);
-        } catch (DatabaseIOException e) {
-          Log.w(TAG, "Failed to delete file metadata: " + uid);
-        }
-      }
-    }
-
-    Util.recursiveDelete(cacheDir);
-  }
-
-  /**
    * Constructs the cache. The cache will delete any unrecognized files from the directory. Hence
    * the directory cannot be used to store other files.
    *
    * @param cacheDir A dedicated cache directory.
-   * @param evictor The evictor to be used. For download use cases where cache eviction should not
-   *     occur, use {@link NoOpCacheEvictor}.
-   * @deprecated Use a constructor that takes a {@link DatabaseProvider} for improved performance.
+   * @param evictor The evictor to be used.
    */
-  @Deprecated
   public SimpleCache(File cacheDir, CacheEvictor evictor) {
     this(cacheDir, evictor, null, false);
   }
@@ -170,14 +89,11 @@ public final class SimpleCache implements Cache {
    * the directory cannot be used to store other files.
    *
    * @param cacheDir A dedicated cache directory.
-   * @param evictor The evictor to be used. For download use cases where cache eviction should not
-   *     occur, use {@link NoOpCacheEvictor}.
+   * @param evictor The evictor to be used.
    * @param secretKey If not null, cache keys will be stored encrypted on filesystem using AES/CBC.
    *     The key must be 16 bytes long.
-   * @deprecated Use a constructor that takes a {@link DatabaseProvider} for improved performance.
    */
-  @Deprecated
-  public SimpleCache(File cacheDir, CacheEvictor evictor, @Nullable byte[] secretKey) {
+  public SimpleCache(File cacheDir, CacheEvictor evictor, byte[] secretKey) {
     this(cacheDir, evictor, secretKey, secretKey != null);
   }
 
@@ -186,24 +102,14 @@ public final class SimpleCache implements Cache {
    * the directory cannot be used to store other files.
    *
    * @param cacheDir A dedicated cache directory.
-   * @param evictor The evictor to be used. For download use cases where cache eviction should not
-   *     occur, use {@link NoOpCacheEvictor}.
+   * @param evictor The evictor to be used.
    * @param secretKey If not null, cache keys will be stored encrypted on filesystem using AES/CBC.
    *     The key must be 16 bytes long.
    * @param encrypt Whether the index will be encrypted when written. Must be false if {@code
    *     secretKey} is null.
-   * @deprecated Use a constructor that takes a {@link DatabaseProvider} for improved performance.
    */
-  @Deprecated
-  public SimpleCache(
-      File cacheDir, CacheEvictor evictor, @Nullable byte[] secretKey, boolean encrypt) {
-    this(
-        cacheDir,
-        evictor,
-        /* databaseProvider= */ null,
-        secretKey,
-        encrypt,
-        /* preferLegacyIndex= */ true);
+  public SimpleCache(File cacheDir, CacheEvictor evictor, byte[] secretKey, boolean encrypt) {
+    this(cacheDir, evictor, new CachedContentIndex(cacheDir, secretKey, encrypt));
   }
 
   /**
@@ -211,77 +117,18 @@ public final class SimpleCache implements Cache {
    * the directory cannot be used to store other files.
    *
    * @param cacheDir A dedicated cache directory.
-   * @param evictor The evictor to be used. For download use cases where cache eviction should not
-   *     occur, use {@link NoOpCacheEvictor}.
-   * @param databaseProvider Provides the database in which the cache index is stored.
+   * @param evictor The evictor to be used.
+   * @param index The CachedContentIndex to be used.
    */
-  public SimpleCache(File cacheDir, CacheEvictor evictor, DatabaseProvider databaseProvider) {
-    this(
-        cacheDir,
-        evictor,
-        databaseProvider,
-        /* legacyIndexSecretKey= */ null,
-        /* legacyIndexEncrypt= */ false,
-        /* preferLegacyIndex= */ false);
-  }
-
-  /**
-   * Constructs the cache. The cache will delete any unrecognized files from the cache directory.
-   * Hence the directory cannot be used to store other files.
-   *
-   * @param cacheDir A dedicated cache directory.
-   * @param evictor The evictor to be used. For download use cases where cache eviction should not
-   *     occur, use {@link NoOpCacheEvictor}.
-   * @param databaseProvider Provides the database in which the cache index is stored, or {@code
-   *     null} to use a legacy index. Using a database index is highly recommended for performance
-   *     reasons.
-   * @param legacyIndexSecretKey A 16 byte AES key for reading, and optionally writing, the legacy
-   *     index. Not used by the database index, however should still be provided when using the
-   *     database index in cases where upgrading from the legacy index may be necessary.
-   * @param legacyIndexEncrypt Whether to encrypt when writing to the legacy index. Must be {@code
-   *     false} if {@code legacyIndexSecretKey} is {@code null}. Not used by the database index.
-   * @param preferLegacyIndex Whether to use the legacy index even if a {@code databaseProvider} is
-   *     provided. Should be {@code false} in nearly all cases. Setting this to {@code true} is only
-   *     useful for downgrading from the database index back to the legacy index.
-   */
-  public SimpleCache(
-      File cacheDir,
-      CacheEvictor evictor,
-      @Nullable DatabaseProvider databaseProvider,
-      @Nullable byte[] legacyIndexSecretKey,
-      boolean legacyIndexEncrypt,
-      boolean preferLegacyIndex) {
-    this(
-        cacheDir,
-        evictor,
-        new CachedContentIndex(
-            databaseProvider,
-            cacheDir,
-            legacyIndexSecretKey,
-            legacyIndexEncrypt,
-            preferLegacyIndex),
-        databaseProvider != null && !preferLegacyIndex
-            ? new CacheFileMetadataIndex(databaseProvider)
-            : null);
-  }
-
-  /* package */ SimpleCache(
-      File cacheDir,
-      CacheEvictor evictor,
-      CachedContentIndex contentIndex,
-      @Nullable CacheFileMetadataIndex fileIndex) {
+  /*package*/ SimpleCache(File cacheDir, CacheEvictor evictor, CachedContentIndex index) {
     if (!lockFolder(cacheDir)) {
       throw new IllegalStateException("Another SimpleCache instance uses the folder: " + cacheDir);
     }
 
     this.cacheDir = cacheDir;
     this.evictor = evictor;
-    this.contentIndex = contentIndex;
-    this.fileIndex = fileIndex;
-    listeners = new HashMap<>();
-    random = new Random();
-    touchCacheSpans = evictor.requiresCacheSpanTouches();
-    uid = UID_UNSET;
+    this.index = index;
+    this.listeners = new HashMap<>();
 
     // Start cache initialization.
     final ConditionVariable conditionVariable = new ConditionVariable();
@@ -298,22 +145,6 @@ public final class SimpleCache implements Cache {
     conditionVariable.block();
   }
 
-  /**
-   * Checks whether the cache was initialized successfully.
-   *
-   * @throws CacheException If an error occurred during initialization.
-   */
-  public synchronized void checkInitialization() throws CacheException {
-    if (!cacheInitializationExceptionsDisabled && initializationException != null) {
-      throw initializationException;
-    }
-  }
-
-  @Override
-  public synchronized long getUid() {
-    return uid;
-  }
-
   @Override
   public synchronized void release() {
     if (released) {
@@ -322,8 +153,8 @@ public final class SimpleCache implements Cache {
     listeners.clear();
     removeStaleSpans();
     try {
-      contentIndex.store();
-    } catch (IOException e) {
+      index.store();
+    } catch (CacheException e) {
       Log.e(TAG, "Storing index file failed", e);
     } finally {
       unlockFolder(cacheDir);
@@ -361,7 +192,7 @@ public final class SimpleCache implements Cache {
   @Override
   public synchronized NavigableSet<CacheSpan> getCachedSpans(String key) {
     Assertions.checkState(!released);
-    CachedContent cachedContent = contentIndex.get(key);
+    CachedContent cachedContent = index.get(key);
     return cachedContent == null || cachedContent.isEmpty()
         ? new TreeSet<>()
         : new TreeSet<CacheSpan>(cachedContent.getSpans());
@@ -370,7 +201,7 @@ public final class SimpleCache implements Cache {
   @Override
   public synchronized Set<String> getKeys() {
     Assertions.checkState(!released);
-    return new HashSet<>(contentIndex.getKeys());
+    return new HashSet<>(index.getKeys());
   }
 
   @Override
@@ -382,9 +213,6 @@ public final class SimpleCache implements Cache {
   @Override
   public synchronized SimpleCacheSpan startReadWrite(String key, long position)
       throws InterruptedException, CacheException {
-    Assertions.checkState(!released);
-    checkInitialization();
-
     while (true) {
       SimpleCacheSpan span = startReadWriteNonBlocking(key, position);
       if (span != null) {
@@ -400,45 +228,30 @@ public final class SimpleCache implements Cache {
   }
 
   @Override
-  @Nullable
-  public synchronized SimpleCacheSpan startReadWriteNonBlocking(String key, long position)
+  public synchronized @Nullable SimpleCacheSpan startReadWriteNonBlocking(String key, long position)
       throws CacheException {
     Assertions.checkState(!released);
-    checkInitialization();
-
-    SimpleCacheSpan span = getSpan(key, position);
+    SimpleCacheSpan cacheSpan = getSpan(key, position);
 
     // Read case.
-    if (span.isCached) {
-      if (!touchCacheSpans) {
-        return span;
+    if (cacheSpan.isCached) {
+      try {
+        // Obtain a new span with updated last access timestamp.
+        SimpleCacheSpan newCacheSpan = index.get(key).touch(cacheSpan);
+        notifySpanTouched(cacheSpan, newCacheSpan);
+        return newCacheSpan;
+      } catch (CacheException e) {
+        // Ignore. In worst case the cache span is evicted early.
+        // This happens very rarely [Internal: b/38351639]
+        return cacheSpan;
       }
-      String fileName = Assertions.checkNotNull(span.file).getName();
-      long length = span.length;
-      long lastTouchTimestamp = System.currentTimeMillis();
-      boolean updateFile = false;
-      if (fileIndex != null) {
-        try {
-          fileIndex.set(fileName, length, lastTouchTimestamp);
-        } catch (IOException e) {
-          Log.w(TAG, "Failed to update index with new touch timestamp.");
-        }
-      } else {
-        // Updating the file itself to incorporate the new last touch timestamp is much slower than
-        // updating the file index. Hence we only update the file if we don't have a file index.
-        updateFile = true;
-      }
-      SimpleCacheSpan newSpan =
-          contentIndex.get(key).setLastTouchTimestamp(span, lastTouchTimestamp, updateFile);
-      notifySpanTouched(span, newSpan);
-      return newSpan;
     }
 
-    CachedContent cachedContent = contentIndex.getOrAdd(key);
+    CachedContent cachedContent = index.getOrAdd(key);
     if (!cachedContent.isLocked()) {
       // Write case, lock available.
       cachedContent.setLocked(true);
-      return span;
+      return cacheSpan;
     }
 
     // Write case, lock not available.
@@ -446,11 +259,10 @@ public final class SimpleCache implements Cache {
   }
 
   @Override
-  public synchronized File startFile(String key, long position, long length) throws CacheException {
+  public synchronized File startFile(String key, long position, long maxLength)
+      throws CacheException {
     Assertions.checkState(!released);
-    checkInitialization();
-
-    CachedContent cachedContent = contentIndex.get(key);
+    CachedContent cachedContent = index.get(key);
     Assertions.checkNotNull(cachedContent);
     Assertions.checkState(cachedContent.isLocked());
     if (!cacheDir.exists()) {
@@ -458,63 +270,46 @@ public final class SimpleCache implements Cache {
       cacheDir.mkdirs();
       removeStaleSpans();
     }
-    evictor.onStartFile(this, key, position, length);
-    // Randomly distribute files into subdirectories with a uniform distribution.
-    File fileDir = new File(cacheDir, Integer.toString(random.nextInt(SUBDIRECTORY_COUNT)));
-    if (!fileDir.exists()) {
-      fileDir.mkdir();
-    }
-    long lastTouchTimestamp = System.currentTimeMillis();
-    return SimpleCacheSpan.getCacheFile(fileDir, cachedContent.id, position, lastTouchTimestamp);
+    evictor.onStartFile(this, key, position, maxLength);
+    return SimpleCacheSpan.getCacheFile(
+        cacheDir, cachedContent.id, position, System.currentTimeMillis());
   }
 
   @Override
-  public synchronized void commitFile(File file, long length) throws CacheException {
+  public synchronized void commitFile(File file) throws CacheException {
     Assertions.checkState(!released);
+    SimpleCacheSpan span = SimpleCacheSpan.createCacheEntry(file, index);
+    Assertions.checkState(span != null);
+    CachedContent cachedContent = index.get(span.key);
+    Assertions.checkNotNull(cachedContent);
+    Assertions.checkState(cachedContent.isLocked());
+    // If the file doesn't exist, don't add it to the in-memory representation.
     if (!file.exists()) {
       return;
     }
-    if (length == 0) {
+    // If the file has length 0, delete it and don't add it to the in-memory representation.
+    if (file.length() == 0) {
       file.delete();
       return;
     }
-
-    SimpleCacheSpan span =
-        Assertions.checkNotNull(SimpleCacheSpan.createCacheEntry(file, length, contentIndex));
-    CachedContent cachedContent = Assertions.checkNotNull(contentIndex.get(span.key));
-    Assertions.checkState(cachedContent.isLocked());
-
     // Check if the span conflicts with the set content length
-    long contentLength = ContentMetadata.getContentLength(cachedContent.getMetadata());
-    if (contentLength != C.LENGTH_UNSET) {
-      Assertions.checkState((span.position + span.length) <= contentLength);
-    }
-
-    if (fileIndex != null) {
-      String fileName = file.getName();
-      try {
-        fileIndex.set(fileName, span.length, span.lastTouchTimestamp);
-      } catch (IOException e) {
-        throw new CacheException(e);
-      }
+    long length = ContentMetadataInternal.getContentLength(cachedContent.getMetadata());
+    if (length != C.LENGTH_UNSET) {
+      Assertions.checkState((span.position + span.length) <= length);
     }
     addSpan(span);
-    try {
-      contentIndex.store();
-    } catch (IOException e) {
-      throw new CacheException(e);
-    }
+    index.store();
     notifyAll();
   }
 
   @Override
   public synchronized void releaseHoleSpan(CacheSpan holeSpan) {
     Assertions.checkState(!released);
-    CachedContent cachedContent = contentIndex.get(holeSpan.key);
+    CachedContent cachedContent = index.get(holeSpan.key);
     Assertions.checkNotNull(cachedContent);
     Assertions.checkState(cachedContent.isLocked());
     cachedContent.setLocked(false);
-    contentIndex.maybeRemove(cachedContent.key);
+    index.maybeRemove(cachedContent.key);
     notifyAll();
   }
 
@@ -527,35 +322,41 @@ public final class SimpleCache implements Cache {
   @Override
   public synchronized boolean isCached(String key, long position, long length) {
     Assertions.checkState(!released);
-    CachedContent cachedContent = contentIndex.get(key);
+    CachedContent cachedContent = index.get(key);
     return cachedContent != null && cachedContent.getCachedBytesLength(position, length) >= length;
   }
 
   @Override
   public synchronized long getCachedLength(String key, long position, long length) {
     Assertions.checkState(!released);
-    CachedContent cachedContent = contentIndex.get(key);
+    CachedContent cachedContent = index.get(key);
     return cachedContent != null ? cachedContent.getCachedBytesLength(position, length) : -length;
+  }
+
+  @Override
+  public synchronized void setContentLength(String key, long length) throws CacheException {
+    ContentMetadataMutations mutations = new ContentMetadataMutations();
+    ContentMetadataInternal.setContentLength(mutations, length);
+    applyContentMetadataMutations(key, mutations);
+  }
+
+  @Override
+  public synchronized long getContentLength(String key) {
+    return ContentMetadataInternal.getContentLength(getContentMetadata(key));
   }
 
   @Override
   public synchronized void applyContentMetadataMutations(
       String key, ContentMetadataMutations mutations) throws CacheException {
     Assertions.checkState(!released);
-    checkInitialization();
-
-    contentIndex.applyContentMetadataMutations(key, mutations);
-    try {
-      contentIndex.store();
-    } catch (IOException e) {
-      throw new CacheException(e);
-    }
+    index.applyContentMetadataMutations(key, mutations);
+    index.store();
   }
 
   @Override
   public synchronized ContentMetadata getContentMetadata(String key) {
     Assertions.checkState(!released);
-    return contentIndex.getContentMetadata(key);
+    return index.getContentMetadata(key);
   }
 
   /**
@@ -571,8 +372,8 @@ public final class SimpleCache implements Cache {
    * @param position The position of the span being requested.
    * @return The corresponding cache {@link SimpleCacheSpan}.
    */
-  private SimpleCacheSpan getSpan(String key, long position) {
-    CachedContent cachedContent = contentIndex.get(key);
+  private SimpleCacheSpan getSpan(String key, long position) throws CacheException {
+    CachedContent cachedContent = index.get(key);
     if (cachedContent == null) {
       return SimpleCacheSpan.createOpenHole(key, position);
     }
@@ -591,108 +392,34 @@ public final class SimpleCache implements Cache {
   /** Ensures that the cache's in-memory representation has been initialized. */
   private void initialize() {
     if (!cacheDir.exists()) {
-      if (!cacheDir.mkdirs()) {
-        String message = "Failed to create cache directory: " + cacheDir;
-        Log.e(TAG, message);
-        initializationException = new CacheException(message);
-        return;
-      }
+      cacheDir.mkdirs();
+      return;
     }
+
+    index.load();
 
     File[] files = cacheDir.listFiles();
     if (files == null) {
-      String message = "Failed to list cache directory files: " + cacheDir;
-      Log.e(TAG, message);
-      initializationException = new CacheException(message);
-      return;
-    }
-
-    uid = loadUid(files);
-    if (uid == UID_UNSET) {
-      try {
-        uid = createUid(cacheDir);
-      } catch (IOException e) {
-        String message = "Failed to create cache UID: " + cacheDir;
-        Log.e(TAG, message, e);
-        initializationException = new CacheException(message, e);
-        return;
-      }
-    }
-
-    try {
-      contentIndex.initialize(uid);
-      if (fileIndex != null) {
-        fileIndex.initialize(uid);
-        Map<String, CacheFileMetadata> fileMetadata = fileIndex.getAll();
-        loadDirectory(cacheDir, /* isRoot= */ true, files, fileMetadata);
-        fileIndex.removeAll(fileMetadata.keySet());
-      } else {
-        loadDirectory(cacheDir, /* isRoot= */ true, files, /* fileMetadata= */ null);
-      }
-    } catch (IOException e) {
-      String message = "Failed to initialize cache indices: " + cacheDir;
-      Log.e(TAG, message, e);
-      initializationException = new CacheException(message, e);
-      return;
-    }
-
-    contentIndex.removeEmpty();
-    try {
-      contentIndex.store();
-    } catch (IOException e) {
-      Log.e(TAG, "Storing index file failed", e);
-    }
-  }
-
-  /**
-   * Loads a cache directory. If the root directory is passed, also loads any subdirectories.
-   *
-   * @param directory The directory.
-   * @param isRoot Whether the directory is the root directory.
-   * @param files The files belonging to the directory.
-   * @param fileMetadata A mutable map containing cache file metadata, keyed by file name. The map
-   *     is modified by removing entries for all loaded files. When the method call returns, the map
-   *     will contain only metadata that was unused. May be null if no file metadata is available.
-   */
-  private void loadDirectory(
-      File directory,
-      boolean isRoot,
-      @Nullable File[] files,
-      @Nullable Map<String, CacheFileMetadata> fileMetadata) {
-    if (files == null || files.length == 0) {
-      // Either (a) directory isn't really a directory (b) it's empty, or (c) listing files failed.
-      if (!isRoot) {
-        // For (a) and (b) deletion is the desired result. For (c) it will be a no-op if the
-        // directory is non-empty, so there's no harm in trying.
-        directory.delete();
-      }
       return;
     }
     for (File file : files) {
-      String fileName = file.getName();
-      if (isRoot && fileName.indexOf('.') == -1) {
-        loadDirectory(file, /* isRoot= */ false, file.listFiles(), fileMetadata);
-      } else {
-        if (isRoot
-            && (CachedContentIndex.isIndexFile(fileName) || fileName.endsWith(UID_FILE_SUFFIX))) {
-          // Skip expected UID and index files in the root directory.
-          continue;
-        }
-        long length = C.LENGTH_UNSET;
-        long lastTouchTimestamp = C.TIME_UNSET;
-        CacheFileMetadata metadata = fileMetadata != null ? fileMetadata.remove(fileName) : null;
-        if (metadata != null) {
-          length = metadata.length;
-          lastTouchTimestamp = metadata.lastTouchTimestamp;
-        }
-        SimpleCacheSpan span =
-            SimpleCacheSpan.createCacheEntry(file, length, lastTouchTimestamp, contentIndex);
-        if (span != null) {
-          addSpan(span);
-        } else {
-          file.delete();
-        }
+      if (file.getName().equals(CachedContentIndex.FILE_NAME)) {
+        continue;
       }
+      SimpleCacheSpan span =
+          file.length() > 0 ? SimpleCacheSpan.createCacheEntry(file, index) : null;
+      if (span != null) {
+        addSpan(span);
+      } else {
+        file.delete();
+      }
+    }
+
+    index.removeEmpty();
+    try {
+      index.store();
+    } catch (CacheException e) {
+      Log.e(TAG, "Storing index file failed", e);
     }
   }
 
@@ -702,28 +429,18 @@ public final class SimpleCache implements Cache {
    * @param span The span to be added.
    */
   private void addSpan(SimpleCacheSpan span) {
-    contentIndex.getOrAdd(span.key).addSpan(span);
+    index.getOrAdd(span.key).addSpan(span);
     totalSpace += span.length;
     notifySpanAdded(span);
   }
 
   private void removeSpanInternal(CacheSpan span) {
-    CachedContent cachedContent = contentIndex.get(span.key);
+    CachedContent cachedContent = index.get(span.key);
     if (cachedContent == null || !cachedContent.removeSpan(span)) {
       return;
     }
     totalSpace -= span.length;
-    if (fileIndex != null) {
-      String fileName = span.file.getName();
-      try {
-        fileIndex.remove(fileName);
-      } catch (IOException e) {
-        // This will leave a stale entry in the file index. It will be removed next time the cache
-        // is initialized.
-        Log.w(TAG, "Failed to remove file index entry for: " + fileName);
-      }
-    }
-    contentIndex.maybeRemove(cachedContent.key);
+    index.maybeRemove(cachedContent.key);
     notifySpanRemoved(span);
   }
 
@@ -733,7 +450,7 @@ public final class SimpleCache implements Cache {
    */
   private void removeStaleSpans() {
     ArrayList<CacheSpan> spansToBeRemoved = new ArrayList<>();
-    for (CachedContent cachedContent : contentIndex.getAll()) {
+    for (CachedContent cachedContent : index.getAll()) {
       for (CacheSpan span : cachedContent.getSpans()) {
         if (!span.file.exists()) {
           spansToBeRemoved.add(span);
@@ -773,48 +490,6 @@ public final class SimpleCache implements Cache {
       }
     }
     evictor.onSpanTouched(this, oldSpan, newSpan);
-  }
-
-  /**
-   * Loads the cache UID from the files belonging to the root directory.
-   *
-   * @param files The files belonging to the root directory.
-   * @return The loaded UID, or {@link #UID_UNSET} if a UID has not yet been created.
-   * @throws IOException If there is an error loading or generating the UID.
-   */
-  private static long loadUid(File[] files) {
-    for (File file : files) {
-      String fileName = file.getName();
-      if (fileName.endsWith(UID_FILE_SUFFIX)) {
-        try {
-          return parseUid(fileName);
-        } catch (NumberFormatException e) {
-          // This should never happen, but if it does delete the malformed UID file and continue.
-          Log.e(TAG, "Malformed UID file: " + file);
-          file.delete();
-        }
-      }
-    }
-    return UID_UNSET;
-  }
-
-  @SuppressWarnings("TrulyRandom")
-  private static long createUid(File directory) throws IOException {
-    // Generate a non-negative UID.
-    long uid = new SecureRandom().nextLong();
-    uid = uid == Long.MIN_VALUE ? 0 : Math.abs(uid);
-    // Persist it as a file.
-    String hexUid = Long.toString(uid, /* radix= */ 16);
-    File hexUidFile = new File(directory, hexUid + UID_FILE_SUFFIX);
-    if (!hexUidFile.createNewFile()) {
-      // False means that the file already exists, so this should never happen.
-      throw new IOException("Failed to create UID file: " + hexUidFile);
-    }
-    return uid;
-  }
-
-  private static long parseUid(String fileName) {
-    return Long.parseLong(fileName.substring(0, fileName.indexOf('.')), /* radix= */ 16);
   }
 
   private static synchronized boolean lockFolder(File cacheDir) {

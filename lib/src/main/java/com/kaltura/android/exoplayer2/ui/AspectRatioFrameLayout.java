@@ -19,7 +19,7 @@ import com.kaltura.android.exoplayer2.R;
 
 import android.content.Context;
 import android.content.res.TypedArray;
-import androidx.annotation.IntDef;
+import android.support.annotation.IntDef;
 import android.util.AttributeSet;
 import android.widget.FrameLayout;
 import java.lang.annotation.Documented;

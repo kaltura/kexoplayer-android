@@ -29,7 +29,7 @@ import android.os.Handler;
 import android.os.Handler.Callback;
 import android.os.HandlerThread;
 import android.os.Message;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import android.view.Surface;
 import com.kaltura.android.exoplayer2.util.Assertions;
 import com.kaltura.android.exoplayer2.util.EGLSurfaceTexture;

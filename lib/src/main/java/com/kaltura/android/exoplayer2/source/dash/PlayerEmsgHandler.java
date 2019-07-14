@@ -19,7 +19,7 @@ import static com.kaltura.android.exoplayer2.util.Util.parseXsDateTime;
 
 import android.os.Handler;
 import android.os.Message;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.Format;
 import com.kaltura.android.exoplayer2.FormatHolder;
@@ -121,7 +121,7 @@ public final class PlayerEmsgHandler implements Handler.Callback {
     removePreviouslyExpiredManifestPublishTimeValues();
   }
 
-  /* package */ boolean maybeRefreshManifestBeforeLoadingNextChunk(long presentationPositionUs) {
+  /* package*/ boolean maybeRefreshManifestBeforeLoadingNextChunk(long presentationPositionUs) {
     if (!manifest.dynamic) {
       return false;
     }

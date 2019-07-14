@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.util;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 

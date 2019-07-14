@@ -17,7 +17,7 @@ package com.kaltura.android.exoplayer2.upstream;
 
 import static com.kaltura.android.exoplayer2.util.Util.castNonNull;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import java.util.ArrayList;
 
 /**

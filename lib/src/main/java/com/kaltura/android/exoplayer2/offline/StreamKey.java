@@ -15,19 +15,14 @@
  */
 package com.kaltura.android.exoplayer2.offline;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 /**
- * A key for a subset of media which can be separately loaded (a "stream").
- *
- * <p>The stream key consists of a period index, a group index within the period and a track index
- * within the group. The interpretation of these indices depends on the type of media for which the
- * stream key is used.
+ * Identifies a given track by the index of the containing period, the index of the containing group
+ * within the period, and the index of the track within the group.
  */
-public final class StreamKey implements Comparable<StreamKey>, Parcelable {
+public final class StreamKey implements Comparable<StreamKey> {
 
   /** The period index. */
   public final int periodIndex;
@@ -53,12 +48,6 @@ public final class StreamKey implements Comparable<StreamKey>, Parcelable {
     this.periodIndex = periodIndex;
     this.groupIndex = groupIndex;
     this.trackIndex = trackIndex;
-  }
-
-  /* package */ StreamKey(Parcel in) {
-    periodIndex = in.readInt();
-    groupIndex = in.readInt();
-    trackIndex = in.readInt();
   }
 
   @Override
@@ -102,32 +91,4 @@ public final class StreamKey implements Comparable<StreamKey>, Parcelable {
     }
     return result;
   }
-
-  // Parcelable implementation.
-
-  @Override
-  public int describeContents() {
-    return 0;
-  }
-
-  @Override
-  public void writeToParcel(Parcel dest, int flags) {
-    dest.writeInt(periodIndex);
-    dest.writeInt(groupIndex);
-    dest.writeInt(trackIndex);
-  }
-
-  public static final Parcelable.Creator<StreamKey> CREATOR =
-      new Parcelable.Creator<StreamKey>() {
-
-        @Override
-        public StreamKey createFromParcel(Parcel in) {
-          return new StreamKey(in);
-        }
-
-        @Override
-        public StreamKey[] newArray(int size) {
-          return new StreamKey[size];
-        }
-      };
 }

@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import android.util.Pair;
 import com.kaltura.android.exoplayer2.source.ads.AdPlaybackState;
 import com.kaltura.android.exoplayer2.util.Assertions;
@@ -120,7 +120,7 @@ public abstract class Timeline {
   public static final class Window {
 
     /** A tag for the window. Not necessarily unique. */
-    @Nullable public Object tag;
+    public @Nullable Object tag;
 
     /**
      * The start time of the presentation to which this window belongs in milliseconds since the
@@ -267,15 +267,14 @@ public abstract class Timeline {
   public static final class Period {
 
     /**
-     * An identifier for the period. Not necessarily unique. May be null if the ids of the period
-     * are not required.
+     * An identifier for the period. Not necessarily unique.
      */
-    @Nullable public Object id;
+    public Object id;
 
     /**
-     * A unique identifier for the period. May be null if the ids of the period are not required.
+     * A unique identifier for the period.
      */
-    @Nullable public Object uid;
+    public Object uid;
 
     /**
      * The index of the window to which this period belongs.
@@ -290,18 +289,11 @@ public abstract class Timeline {
     private long positionInWindowUs;
     private AdPlaybackState adPlaybackState;
 
-    /** Creates a new instance with no ad playback state. */
-    public Period() {
-      adPlaybackState = AdPlaybackState.NONE;
-    }
-
     /**
      * Sets the data held by this period.
      *
-     * @param id An identifier for the period. Not necessarily unique. May be null if the ids of the
-     *     period are not required.
-     * @param uid A unique identifier for the period. May be null if the ids of the period are not
-     *     required.
+     * @param id An identifier for the period. Not necessarily unique.
+     * @param uid A unique identifier for the period.
      * @param windowIndex The index of the window to which this period belongs.
      * @param durationUs The duration of this period in microseconds, or {@link C#TIME_UNSET} if
      *     unknown.
@@ -310,11 +302,7 @@ public abstract class Timeline {
      *     period is not within the window.
      * @return This period, for convenience.
      */
-    public Period set(
-        @Nullable Object id,
-        @Nullable Object uid,
-        int windowIndex,
-        long durationUs,
+    public Period set(Object id, Object uid, int windowIndex, long durationUs,
         long positionInWindowUs) {
       return set(id, uid, windowIndex, durationUs, positionInWindowUs, AdPlaybackState.NONE);
     }
@@ -322,10 +310,8 @@ public abstract class Timeline {
     /**
      * Sets the data held by this period.
      *
-     * @param id An identifier for the period. Not necessarily unique. May be null if the ids of the
-     *     period are not required.
-     * @param uid A unique identifier for the period. May be null if the ids of the period are not
-     *     required.
+     * @param id An identifier for the period. Not necessarily unique.
+     * @param uid A unique identifier for the period.
      * @param windowIndex The index of the window to which this period belongs.
      * @param durationUs The duration of this period in microseconds, or {@link C#TIME_UNSET} if
      *     unknown.
@@ -337,8 +323,8 @@ public abstract class Timeline {
      * @return This period, for convenience.
      */
     public Period set(
-        @Nullable Object id,
-        @Nullable Object uid,
+        Object id,
+        Object uid,
         int windowIndex,
         long durationUs,
         long positionInWindowUs,
@@ -458,7 +444,7 @@ public abstract class Timeline {
      * @return The index of the ad group, or {@link C#INDEX_UNSET}.
      */
     public int getAdGroupIndexAfterPositionUs(long positionUs) {
-      return adPlaybackState.getAdGroupIndexAfterPositionUs(positionUs, durationUs);
+      return adPlaybackState.getAdGroupIndexAfterPositionUs(positionUs);
     }
 
     /**
@@ -721,9 +707,7 @@ public abstract class Timeline {
    */
   public final Pair<Object, Long> getPeriodPosition(
       Window window, Period period, int windowIndex, long windowPositionUs) {
-    return Assertions.checkNotNull(
-        getPeriodPosition(
-            window, period, windowIndex, windowPositionUs, /* defaultPositionProjectionUs= */ 0));
+    return getPeriodPosition(window, period, windowIndex, windowPositionUs, 0);
   }
 
   /**
@@ -740,7 +724,6 @@ public abstract class Timeline {
    *     is {@link C#TIME_UNSET}, {@code defaultPositionProjectionUs} is non-zero, and the window's
    *     position could not be projected by {@code defaultPositionProjectionUs}.
    */
-  @Nullable
   public final Pair<Object, Long> getPeriodPosition(
       Window window,
       Period period,
@@ -763,7 +746,7 @@ public abstract class Timeline {
       periodPositionUs -= periodDurationUs;
       periodDurationUs = getPeriod(++periodIndex, period, /* setIds= */ true).getDurationUs();
     }
-    return Pair.create(Assertions.checkNotNull(period.uid), periodPositionUs);
+    return Pair.create(period.uid, periodPositionUs);
   }
 
   /**
@@ -778,8 +761,8 @@ public abstract class Timeline {
   }
 
   /**
-   * Populates a {@link Period} with data for the period at the specified index. {@link Period#id}
-   * and {@link Period#uid} will be set to null.
+   * Populates a {@link Period} with data for the period at the specified index. Does not populate
+   * {@link Period#id} and {@link Period#uid}.
    *
    * @param periodIndex The index of the period.
    * @param period The {@link Period} to populate. Must not be null.

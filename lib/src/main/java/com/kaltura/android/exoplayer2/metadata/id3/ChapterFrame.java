@@ -18,7 +18,7 @@ package com.kaltura.android.exoplayer2.metadata.id3;
 import static com.kaltura.android.exoplayer2.util.Util.castNonNull;
 
 import android.os.Parcel;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.util.Util;
 import java.util.Arrays;

@@ -18,21 +18,45 @@ package com.kaltura.android.exoplayer2.audio;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.Format;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * An {@link AudioProcessor} that converts 8-bit, 24-bit and 32-bit integer PCM audio to 16-bit
  * integer PCM audio.
  */
-/* package */ final class ResamplingAudioProcessor extends BaseAudioProcessor {
+/* package */ final class ResamplingAudioProcessor implements AudioProcessor {
+
+  private int sampleRateHz;
+  private int channelCount;
+  private @C.PcmEncoding int encoding;
+  private ByteBuffer buffer;
+  private ByteBuffer outputBuffer;
+  private boolean inputEnded;
+
+  /** Creates a new audio processor that converts audio data to {@link C#ENCODING_PCM_16BIT}. */
+  public ResamplingAudioProcessor() {
+    sampleRateHz = Format.NO_VALUE;
+    channelCount = Format.NO_VALUE;
+    encoding = C.ENCODING_INVALID;
+    buffer = EMPTY_BUFFER;
+    outputBuffer = EMPTY_BUFFER;
+  }
 
   @Override
-  public boolean configure(int sampleRateHz, int channelCount, @C.PcmEncoding int encoding)
+  public boolean configure(int sampleRateHz, int channelCount, @C.Encoding int encoding)
       throws UnhandledFormatException {
     if (encoding != C.ENCODING_PCM_8BIT && encoding != C.ENCODING_PCM_16BIT
         && encoding != C.ENCODING_PCM_24BIT && encoding != C.ENCODING_PCM_32BIT) {
       throw new UnhandledFormatException(sampleRateHz, channelCount, encoding);
     }
-    return setInputFormat(sampleRateHz, channelCount, encoding);
+    if (this.sampleRateHz == sampleRateHz && this.channelCount == channelCount
+        && this.encoding == encoding) {
+      return false;
+    }
+    this.sampleRateHz = sampleRateHz;
+    this.channelCount = channelCount;
+    this.encoding = encoding;
+    return true;
   }
 
   @Override
@@ -41,8 +65,18 @@ import java.nio.ByteBuffer;
   }
 
   @Override
+  public int getOutputChannelCount() {
+    return channelCount;
+  }
+
+  @Override
   public int getOutputEncoding() {
     return C.ENCODING_PCM_16BIT;
+  }
+
+  @Override
+  public int getOutputSampleRateHz() {
+    return sampleRateHz;
   }
 
   @Override
@@ -71,9 +105,13 @@ import java.nio.ByteBuffer;
       default:
         throw new IllegalStateException();
     }
+    if (buffer.capacity() < resampledSize) {
+      buffer = ByteBuffer.allocateDirect(resampledSize).order(ByteOrder.nativeOrder());
+    } else {
+      buffer.clear();
+    }
 
     // Resample the little endian input and update the input/output buffers.
-    ByteBuffer buffer = replaceOutputBuffer(resampledSize);
     switch (encoding) {
       case C.ENCODING_PCM_8BIT:
         // 8->16 bit resampling. Shift each byte from [0, 256) to [-128, 128) and scale up.
@@ -108,6 +146,40 @@ import java.nio.ByteBuffer;
     }
     inputBuffer.position(inputBuffer.limit());
     buffer.flip();
+    outputBuffer = buffer;
+  }
+
+  @Override
+  public void queueEndOfStream() {
+    inputEnded = true;
+  }
+
+  @Override
+  public ByteBuffer getOutput() {
+    ByteBuffer outputBuffer = this.outputBuffer;
+    this.outputBuffer = EMPTY_BUFFER;
+    return outputBuffer;
+  }
+
+  @SuppressWarnings("ReferenceEquality")
+  @Override
+  public boolean isEnded() {
+    return inputEnded && outputBuffer == EMPTY_BUFFER;
+  }
+
+  @Override
+  public void flush() {
+    outputBuffer = EMPTY_BUFFER;
+    inputEnded = false;
+  }
+
+  @Override
+  public void reset() {
+    flush();
+    sampleRateHz = Format.NO_VALUE;
+    channelCount = Format.NO_VALUE;
+    encoding = C.ENCODING_INVALID;
+    buffer = EMPTY_BUFFER;
   }
 
 }

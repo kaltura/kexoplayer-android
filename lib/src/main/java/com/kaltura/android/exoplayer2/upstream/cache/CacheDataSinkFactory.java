@@ -23,37 +23,28 @@ import com.kaltura.android.exoplayer2.upstream.DataSink;
 public final class CacheDataSinkFactory implements DataSink.Factory {
 
   private final Cache cache;
-  private final long fragmentSize;
+  private final long maxCacheFileSize;
   private final int bufferSize;
 
-  private boolean syncFileDescriptor;
-
-  /** @see CacheDataSink#CacheDataSink(Cache, long) */
-  public CacheDataSinkFactory(Cache cache, long fragmentSize) {
-    this(cache, fragmentSize, CacheDataSink.DEFAULT_BUFFER_SIZE);
-  }
-
-  /** @see CacheDataSink#CacheDataSink(Cache, long, int) */
-  public CacheDataSinkFactory(Cache cache, long fragmentSize, int bufferSize) {
-    this.cache = cache;
-    this.fragmentSize = fragmentSize;
-    this.bufferSize = bufferSize;
+  /**
+   * @see CacheDataSink#CacheDataSink(Cache, long)
+   */
+  public CacheDataSinkFactory(Cache cache, long maxCacheFileSize) {
+    this(cache, maxCacheFileSize, CacheDataSink.DEFAULT_BUFFER_SIZE);
   }
 
   /**
-   * See {@link CacheDataSink#experimental_setSyncFileDescriptor(boolean)}.
-   *
-   * <p>This method is experimental, and will be renamed or removed in a future release.
+   * @see CacheDataSink#CacheDataSink(Cache, long, int)
    */
-  public CacheDataSinkFactory experimental_setSyncFileDescriptor(boolean syncFileDescriptor) {
-    this.syncFileDescriptor = syncFileDescriptor;
-    return this;
+  public CacheDataSinkFactory(Cache cache, long maxCacheFileSize, int bufferSize) {
+    this.cache = cache;
+    this.maxCacheFileSize = maxCacheFileSize;
+    this.bufferSize = bufferSize;
   }
 
   @Override
   public DataSink createDataSink() {
-    CacheDataSink dataSink = new CacheDataSink(cache, fragmentSize, bufferSize);
-    dataSink.experimental_setSyncFileDescriptor(syncFileDescriptor);
-    return dataSink;
+    return new CacheDataSink(cache, maxCacheFileSize, bufferSize);
   }
+
 }

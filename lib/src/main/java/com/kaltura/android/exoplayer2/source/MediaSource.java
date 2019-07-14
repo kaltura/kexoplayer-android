@@ -16,7 +16,7 @@
 package com.kaltura.android.exoplayer2.source;
 
 import android.os.Handler;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.ExoPlayer;
 import com.kaltura.android.exoplayer2.Timeline;
@@ -90,10 +90,13 @@ public interface MediaSource {
     public final long windowSequenceNumber;
 
     /**
-     * The index of the next ad group to which the media period's content is clipped, or {@link
-     * C#INDEX_UNSET} if there is no following ad group or if this media period is an ad.
+     * The end position of the media to play within the media period, in microseconds, or {@link
+     * C#TIME_END_OF_SOURCE} if the end position is the end of the media period.
+     *
+     * <p>Note that this only applies if the media period is for content (i.e., not for an ad) and
+     * is clipped to the position of the next ad group.
      */
-    public final int nextAdGroupIndex;
+    public final long endPositionUs;
 
     /**
      * Creates a media period identifier for a dummy period which is not part of a buffered sequence
@@ -102,7 +105,7 @@ public interface MediaSource {
      * @param periodUid The unique id of the timeline period.
      */
     public MediaPeriodId(Object periodUid) {
-      this(periodUid, /* windowSequenceNumber= */ C.INDEX_UNSET);
+      this(periodUid, C.INDEX_UNSET);
     }
 
     /**
@@ -113,12 +116,7 @@ public interface MediaSource {
      *     windows this media period is part of.
      */
     public MediaPeriodId(Object periodUid, long windowSequenceNumber) {
-      this(
-          periodUid,
-          /* adGroupIndex= */ C.INDEX_UNSET,
-          /* adIndexInAdGroup= */ C.INDEX_UNSET,
-          windowSequenceNumber,
-          /* nextAdGroupIndex= */ C.INDEX_UNSET);
+      this(periodUid, C.INDEX_UNSET, C.INDEX_UNSET, windowSequenceNumber, C.TIME_END_OF_SOURCE);
     }
 
     /**
@@ -127,16 +125,11 @@ public interface MediaSource {
      * @param periodUid The unique id of the timeline period.
      * @param windowSequenceNumber The sequence number of the window in the buffered sequence of
      *     windows this media period is part of.
-     * @param nextAdGroupIndex The index of the next ad group to which the media period's content is
-     *     clipped.
+     * @param endPositionUs The end position of the media period within the timeline period, in
+     *     microseconds.
      */
-    public MediaPeriodId(Object periodUid, long windowSequenceNumber, int nextAdGroupIndex) {
-      this(
-          periodUid,
-          /* adGroupIndex= */ C.INDEX_UNSET,
-          /* adIndexInAdGroup= */ C.INDEX_UNSET,
-          windowSequenceNumber,
-          nextAdGroupIndex);
+    public MediaPeriodId(Object periodUid, long windowSequenceNumber, long endPositionUs) {
+      this(periodUid, C.INDEX_UNSET, C.INDEX_UNSET, windowSequenceNumber, endPositionUs);
     }
 
     /**
@@ -151,12 +144,7 @@ public interface MediaSource {
      */
     public MediaPeriodId(
         Object periodUid, int adGroupIndex, int adIndexInAdGroup, long windowSequenceNumber) {
-      this(
-          periodUid,
-          adGroupIndex,
-          adIndexInAdGroup,
-          windowSequenceNumber,
-          /* nextAdGroupIndex= */ C.INDEX_UNSET);
+      this(periodUid, adGroupIndex, adIndexInAdGroup, windowSequenceNumber, C.TIME_END_OF_SOURCE);
     }
 
     private MediaPeriodId(
@@ -164,12 +152,12 @@ public interface MediaSource {
         int adGroupIndex,
         int adIndexInAdGroup,
         long windowSequenceNumber,
-        int nextAdGroupIndex) {
+        long endPositionUs) {
       this.periodUid = periodUid;
       this.adGroupIndex = adGroupIndex;
       this.adIndexInAdGroup = adIndexInAdGroup;
       this.windowSequenceNumber = windowSequenceNumber;
-      this.nextAdGroupIndex = nextAdGroupIndex;
+      this.endPositionUs = endPositionUs;
     }
 
     /** Returns a copy of this period identifier but with {@code newPeriodUid} as its period uid. */
@@ -177,7 +165,7 @@ public interface MediaSource {
       return periodUid.equals(newPeriodUid)
           ? this
           : new MediaPeriodId(
-              newPeriodUid, adGroupIndex, adIndexInAdGroup, windowSequenceNumber, nextAdGroupIndex);
+              newPeriodUid, adGroupIndex, adIndexInAdGroup, windowSequenceNumber, endPositionUs);
     }
 
     /**
@@ -201,7 +189,7 @@ public interface MediaSource {
           && adGroupIndex == periodId.adGroupIndex
           && adIndexInAdGroup == periodId.adIndexInAdGroup
           && windowSequenceNumber == periodId.windowSequenceNumber
-          && nextAdGroupIndex == periodId.nextAdGroupIndex;
+          && endPositionUs == periodId.endPositionUs;
     }
 
     @Override
@@ -211,7 +199,7 @@ public interface MediaSource {
       result = 31 * result + adGroupIndex;
       result = 31 * result + adIndexInAdGroup;
       result = 31 * result + (int) windowSequenceNumber;
-      result = 31 * result + nextAdGroupIndex;
+      result = 31 * result + (int) endPositionUs;
       return result;
     }
   }

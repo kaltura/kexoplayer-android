@@ -18,8 +18,6 @@ package com.kaltura.android.exoplayer2.upstream;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.ParserException;
 import com.kaltura.android.exoplayer2.upstream.HttpDataSource.InvalidResponseCodeException;
-import com.kaltura.android.exoplayer2.upstream.Loader.UnexpectedLoaderException;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 /** Default implementation of {@link LoadErrorHandlingPolicy}. */
@@ -78,16 +76,13 @@ public class DefaultLoadErrorHandlingPolicy implements LoadErrorHandlingPolicy {
   }
 
   /**
-   * Retries for any exception that is not a subclass of {@link ParserException}, {@link
-   * FileNotFoundException} or {@link UnexpectedLoaderException}. The retry delay is calculated as
-   * {@code Math.min((errorCount - 1) * 1000, 5000)}.
+   * Retries for any exception that is not a subclass of {@link ParserException}. The retry delay is
+   * calculated as {@code Math.min((errorCount - 1) * 1000, 5000)}.
    */
   @Override
   public long getRetryDelayMsFor(
       int dataType, long loadDurationMs, IOException exception, int errorCount) {
     return exception instanceof ParserException
-            || exception instanceof FileNotFoundException
-            || exception instanceof UnexpectedLoaderException
         ? C.TIME_UNSET
         : Math.min((errorCount - 1) * 1000, 5000);
   }

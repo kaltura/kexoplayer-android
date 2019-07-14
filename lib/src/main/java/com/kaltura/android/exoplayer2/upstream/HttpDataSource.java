@@ -15,8 +15,8 @@
  */
 package com.kaltura.android.exoplayer2.upstream;
 
-import androidx.annotation.IntDef;
-import androidx.annotation.Nullable;
+import android.support.annotation.IntDef;
+import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import com.kaltura.android.exoplayer2.util.Predicate;
 import com.kaltura.android.exoplayer2.util.Util;

@@ -16,13 +16,12 @@
 package com.kaltura.android.exoplayer2.offline;
 
 import android.net.Uri;
-import androidx.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.upstream.DataSpec;
 import com.kaltura.android.exoplayer2.upstream.cache.Cache;
 import com.kaltura.android.exoplayer2.upstream.cache.CacheDataSource;
-import com.kaltura.android.exoplayer2.upstream.cache.CacheKeyFactory;
 import com.kaltura.android.exoplayer2.upstream.cache.CacheUtil;
+import com.kaltura.android.exoplayer2.upstream.cache.CacheUtil.CachingCounters;
 import com.kaltura.android.exoplayer2.util.PriorityTaskManager;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,8 +36,8 @@ public final class ProgressiveDownloader implements Downloader {
   private final DataSpec dataSpec;
   private final Cache cache;
   private final CacheDataSource dataSource;
-  private final CacheKeyFactory cacheKeyFactory;
   private final PriorityTaskManager priorityTaskManager;
+  private final CacheUtil.CachingCounters cachingCounters;
   private final AtomicBoolean isCanceled;
 
   /**
@@ -48,35 +47,27 @@ public final class ProgressiveDownloader implements Downloader {
    * @param constructorHelper A {@link DownloaderConstructorHelper} instance.
    */
   public ProgressiveDownloader(
-      Uri uri, @Nullable String customCacheKey, DownloaderConstructorHelper constructorHelper) {
-    this.dataSpec =
-        new DataSpec(
-            uri,
-            /* absoluteStreamPosition= */ 0,
-            C.LENGTH_UNSET,
-            customCacheKey,
-            /* flags= */ DataSpec.FLAG_ALLOW_CACHE_FRAGMENTATION);
+      Uri uri, String customCacheKey, DownloaderConstructorHelper constructorHelper) {
+    this.dataSpec = new DataSpec(uri, 0, C.LENGTH_UNSET, customCacheKey, 0);
     this.cache = constructorHelper.getCache();
-    this.dataSource = constructorHelper.createCacheDataSource();
-    this.cacheKeyFactory = constructorHelper.getCacheKeyFactory();
+    this.dataSource = constructorHelper.buildCacheDataSource(false);
     this.priorityTaskManager = constructorHelper.getPriorityTaskManager();
+    cachingCounters = new CachingCounters();
     isCanceled = new AtomicBoolean();
   }
 
   @Override
-  public void download(@Nullable ProgressListener progressListener)
-      throws InterruptedException, IOException {
+  public void download() throws InterruptedException, IOException {
     priorityTaskManager.add(C.PRIORITY_DOWNLOAD);
     try {
       CacheUtil.cache(
           dataSpec,
           cache,
-          cacheKeyFactory,
           dataSource,
           new byte[BUFFER_SIZE_BYTES],
           priorityTaskManager,
           C.PRIORITY_DOWNLOAD,
-          progressListener == null ? null : new ProgressForwarder(progressListener),
+          cachingCounters,
           isCanceled,
           /* enableEOFException= */ true);
     } finally {
@@ -90,25 +81,20 @@ public final class ProgressiveDownloader implements Downloader {
   }
 
   @Override
-  public void remove() {
-    CacheUtil.remove(dataSpec, cache, cacheKeyFactory);
+  public long getDownloadedBytes() {
+    return cachingCounters.totalCachedBytes();
   }
 
-  private static final class ProgressForwarder implements CacheUtil.ProgressListener {
+  @Override
+  public float getDownloadPercentage() {
+    long contentLength = cachingCounters.contentLength;
+    return contentLength == C.LENGTH_UNSET
+        ? C.PERCENTAGE_UNSET
+        : ((cachingCounters.totalCachedBytes() * 100f) / contentLength);
+  }
 
-    private final ProgressListener progessListener;
-
-    public ProgressForwarder(ProgressListener progressListener) {
-      this.progessListener = progressListener;
-    }
-
-    @Override
-    public void onProgress(long contentLength, long bytesCached, long newBytesCached) {
-      float percentDownloaded =
-          contentLength == C.LENGTH_UNSET || contentLength == 0
-              ? C.PERCENTAGE_UNSET
-              : ((bytesCached * 100f) / contentLength);
-      progessListener.onProgress(contentLength, bytesCached, percentDownloaded);
-    }
+  @Override
+  public void remove() {
+    CacheUtil.remove(cache, CacheUtil.getKey(dataSpec));
   }
 }

@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.metadata.id3;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.metadata.Metadata;
 import com.kaltura.android.exoplayer2.metadata.MetadataDecoder;
@@ -713,11 +713,9 @@ public final class Id3Decoder implements MetadataDecoder {
    */
   private static int removeUnsynchronization(ParsableByteArray data, int length) {
     byte[] bytes = data.data;
-    int startPosition = data.getPosition();
-    for (int i = startPosition; i + 1 < startPosition + length; i++) {
+    for (int i = data.getPosition(); i + 1 < length; i++) {
       if ((bytes[i] & 0xFF) == 0xFF && bytes[i + 1] == 0x00) {
-        int relativePosition = i - startPosition;
-        System.arraycopy(bytes, i + 2, bytes, i + 1, length - relativePosition - 2);
+        System.arraycopy(bytes, i + 2, bytes, i + 1, length - i - 2);
         length--;
       }
     }

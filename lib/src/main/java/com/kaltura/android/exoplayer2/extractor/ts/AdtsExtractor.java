@@ -17,8 +17,8 @@ package com.kaltura.android.exoplayer2.extractor.ts;
 
 import static com.kaltura.android.exoplayer2.extractor.ts.TsPayloadReader.FLAG_DATA_ALIGNMENT_INDICATOR;
 
-import androidx.annotation.IntDef;
-import androidx.annotation.Nullable;
+import android.support.annotation.IntDef;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.ParserException;
 import com.kaltura.android.exoplayer2.extractor.ConstantBitrateSeekMap;

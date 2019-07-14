@@ -15,14 +15,13 @@
  */
 package com.kaltura.android.exoplayer2.extractor.mp4;
 
-import androidx.annotation.IntDef;
-import androidx.annotation.Nullable;
+import android.support.annotation.IntDef;
+import android.support.annotation.Nullable;
 import android.util.Pair;
 import android.util.SparseArray;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.Format;
 import com.kaltura.android.exoplayer2.ParserException;
-import com.kaltura.android.exoplayer2.audio.Ac4Util;
 import com.kaltura.android.exoplayer2.drm.DrmInitData;
 import com.kaltura.android.exoplayer2.drm.DrmInitData.SchemeData;
 import com.kaltura.android.exoplayer2.extractor.ChunkIndex;
@@ -54,8 +53,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-/** Extracts data from the FMP4 container format. */
-public class FragmentedMp4Extractor implements Extractor {
+/**
+ * Extracts data from the FMP4 container format.
+ */
+public final class FragmentedMp4Extractor implements Extractor {
 
   /** Factory for {@link FragmentedMp4Extractor} instances. */
   public static final ExtractorsFactory FACTORY =
@@ -134,14 +135,13 @@ public class FragmentedMp4Extractor implements Extractor {
   private final ParsableByteArray nalStartCode;
   private final ParsableByteArray nalPrefix;
   private final ParsableByteArray nalBuffer;
-  private final byte[] scratchBytes;
-  private final ParsableByteArray scratch;
 
   // Adjusts sample timestamps.
   private final @Nullable TimestampAdjuster timestampAdjuster;
 
   // Parser state.
   private final ParsableByteArray atomHeader;
+  private final byte[] extendedTypeScratch;
   private final ArrayDeque<ContainerAtom> containerAtoms;
   private final ArrayDeque<MetadataSampleInfo> pendingMetadataSampleInfos;
   private final @Nullable TrackOutput additionalEmsgTrackOutput;
@@ -162,7 +162,6 @@ public class FragmentedMp4Extractor implements Extractor {
   private int sampleBytesWritten;
   private int sampleCurrentNalBytesRemaining;
   private boolean processSeiNalUnitPayload;
-  private boolean isAc4HeaderRequired;
 
   // Extractor output.
   private ExtractorOutput extractorOutput;
@@ -257,8 +256,7 @@ public class FragmentedMp4Extractor implements Extractor {
     nalStartCode = new ParsableByteArray(NalUnitUtil.NAL_START_CODE);
     nalPrefix = new ParsableByteArray(5);
     nalBuffer = new ParsableByteArray();
-    scratchBytes = new byte[16];
-    scratch = new ParsableByteArray(scratchBytes);
+    extendedTypeScratch = new byte[16];
     containerAtoms = new ArrayDeque<>();
     pendingMetadataSampleInfos = new ArrayDeque<>();
     trackBundles = new SparseArray<>();
@@ -295,7 +293,6 @@ public class FragmentedMp4Extractor implements Extractor {
     pendingMetadataSampleBytes = 0;
     pendingSeekTimeUs = timeUs;
     containerAtoms.clear();
-    isAc4HeaderRequired = false;
     enterReadingAtomHeaderState();
   }
 
@@ -489,15 +486,8 @@ public class FragmentedMp4Extractor implements Extractor {
     for (int i = 0; i < moovContainerChildrenSize; i++) {
       Atom.ContainerAtom atom = moov.containerChildren.get(i);
       if (atom.type == Atom.TYPE_trak) {
-        Track track =
-            modifyTrack(
-                AtomParsers.parseTrak(
-                    atom,
-                    moov.getLeafAtomOfType(Atom.TYPE_mvhd),
-                    duration,
-                    drmInitData,
-                    (flags & FLAG_WORKAROUND_IGNORE_EDIT_LISTS) != 0,
-                    false));
+        Track track = AtomParsers.parseTrak(atom, moov.getLeafAtomOfType(Atom.TYPE_mvhd), duration,
+            drmInitData, (flags & FLAG_WORKAROUND_IGNORE_EDIT_LISTS) != 0, false);
         if (track != null) {
           tracks.put(track.id, track);
         }
@@ -527,11 +517,6 @@ public class FragmentedMp4Extractor implements Extractor {
     }
   }
 
-  @Nullable
-  protected Track modifyTrack(@Nullable Track track) {
-    return track;
-  }
-
   private DefaultSampleValues getDefaultSampleValues(
       SparseArray<DefaultSampleValues> defaultSampleValuesArray, int trackId) {
     if (defaultSampleValuesArray.size() == 1) {
@@ -543,7 +528,7 @@ public class FragmentedMp4Extractor implements Extractor {
   }
 
   private void onMoofContainerAtomRead(ContainerAtom moof) throws ParserException {
-    parseMoof(moof, trackBundles, flags, scratchBytes);
+    parseMoof(moof, trackBundles, flags, extendedTypeScratch);
     // If drm init data is sideloaded, we ignore pssh boxes.
     DrmInitData drmInitData = sideloadedDrmInitData != null ? null
         : getDrmInitDataFromAtoms(moof.leafChildren);
@@ -1064,7 +1049,7 @@ public class FragmentedMp4Extractor implements Extractor {
     byte[] keyId = new byte[16];
     sgpd.readBytes(keyId, 0, keyId.length);
     byte[] constantIv = null;
-    if (perSampleIvSize == 0) {
+    if (isProtected && perSampleIvSize == 0) {
       int constantIvSize = sgpd.readUnsignedByte();
       constantIv = new byte[constantIvSize];
       sgpd.readBytes(constantIv, 0, constantIvSize);
@@ -1229,8 +1214,6 @@ public class FragmentedMp4Extractor implements Extractor {
       sampleSize += sampleBytesWritten;
       parserState = STATE_READING_SAMPLE_CONTINUE;
       sampleCurrentNalBytesRemaining = 0;
-      isAc4HeaderRequired =
-          MimeTypes.AUDIO_AC4.equals(currentTrackBundle.track.format.sampleMimeType);
     }
 
     TrackFragment fragment = currentTrackBundle.fragment;
@@ -1258,11 +1241,7 @@ public class FragmentedMp4Extractor implements Extractor {
           // Read the NAL length so that we know where we find the next one, and its type.
           input.readFully(nalPrefixData, nalUnitLengthFieldLengthDiff, nalUnitPrefixLength);
           nalPrefix.setPosition(0);
-          int nalLengthInt = nalPrefix.readInt();
-          if (nalLengthInt < 1) {
-            throw new ParserException("Invalid NAL length");
-          }
-          sampleCurrentNalBytesRemaining = nalLengthInt - 1;
+          sampleCurrentNalBytesRemaining = nalPrefix.readUnsignedIntToInt() - 1;
           // Write a start code for the current NAL unit.
           nalStartCode.setPosition(0);
           output.sampleData(nalStartCode, 4);
@@ -1295,14 +1274,6 @@ public class FragmentedMp4Extractor implements Extractor {
         }
       }
     } else {
-      if (isAc4HeaderRequired) {
-        Ac4Util.getAc4SampleHeader(sampleSize, scratch);
-        int length = scratch.limit();
-        output.sampleData(scratch, length);
-        sampleSize += length;
-        sampleBytesWritten += length;
-        isAc4HeaderRequired = false;
-      }
       while (sampleBytesWritten < sampleSize) {
         int writtenBytes = output.sampleData(input, sampleSize - sampleBytesWritten, false);
         sampleBytesWritten += writtenBytes;

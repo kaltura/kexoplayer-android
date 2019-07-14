@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.extractor;
 
-import androidx.annotation.IntDef;
+import android.support.annotation.IntDef;
 import com.kaltura.android.exoplayer2.C;
 import java.io.IOException;
 import java.lang.annotation.Documented;

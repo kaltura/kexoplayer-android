@@ -16,27 +16,39 @@
 package com.kaltura.android.exoplayer2.audio;
 
 import com.kaltura.android.exoplayer2.C;
+import com.kaltura.android.exoplayer2.C.Encoding;
+import com.kaltura.android.exoplayer2.Format;
 import com.kaltura.android.exoplayer2.util.Util;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /** Audio processor for trimming samples from the start/end of data. */
-/* package */ final class TrimmingAudioProcessor extends BaseAudioProcessor {
+/* package */ final class TrimmingAudioProcessor implements AudioProcessor {
 
-  @C.PcmEncoding private static final int OUTPUT_ENCODING = C.ENCODING_PCM_16BIT;
+  private static final int OUTPUT_ENCODING = C.ENCODING_PCM_16BIT;
 
   private boolean isActive;
   private int trimStartFrames;
   private int trimEndFrames;
+  private int channelCount;
+  private int sampleRateHz;
   private int bytesPerFrame;
   private boolean receivedInputSinceConfigure;
 
   private int pendingTrimStartBytes;
+  private ByteBuffer buffer;
+  private ByteBuffer outputBuffer;
   private byte[] endBuffer;
   private int endBufferSize;
+  private boolean inputEnded;
   private long trimmedFrameCount;
 
   /** Creates a new audio processor for trimming samples from the start/end of data. */
   public TrimmingAudioProcessor() {
+    buffer = EMPTY_BUFFER;
+    outputBuffer = EMPTY_BUFFER;
+    channelCount = Format.NO_VALUE;
+    sampleRateHz = Format.NO_VALUE;
     endBuffer = Util.EMPTY_BYTE_ARRAY;
   }
 
@@ -68,7 +80,7 @@ import java.nio.ByteBuffer;
   }
 
   @Override
-  public boolean configure(int sampleRateHz, int channelCount, @C.PcmEncoding int encoding)
+  public boolean configure(int sampleRateHz, int channelCount, @Encoding int encoding)
       throws UnhandledFormatException {
     if (encoding != OUTPUT_ENCODING) {
       throw new UnhandledFormatException(sampleRateHz, channelCount, encoding);
@@ -76,6 +88,8 @@ import java.nio.ByteBuffer;
     if (endBufferSize > 0) {
       trimmedFrameCount += endBufferSize / bytesPerFrame;
     }
+    this.channelCount = channelCount;
+    this.sampleRateHz = sampleRateHz;
     bytesPerFrame = Util.getPcmFrameSize(OUTPUT_ENCODING, channelCount);
     endBuffer = new byte[trimEndFrames * bytesPerFrame];
     endBufferSize = 0;
@@ -83,13 +97,27 @@ import java.nio.ByteBuffer;
     boolean wasActive = isActive;
     isActive = trimStartFrames != 0 || trimEndFrames != 0;
     receivedInputSinceConfigure = false;
-    setInputFormat(sampleRateHz, channelCount, encoding);
     return wasActive != isActive;
   }
 
   @Override
   public boolean isActive() {
     return isActive;
+  }
+
+  @Override
+  public int getOutputChannelCount() {
+    return channelCount;
+  }
+
+  @Override
+  public int getOutputEncoding() {
+    return OUTPUT_ENCODING;
+  }
+
+  @Override
+  public int getOutputSampleRateHz() {
+    return sampleRateHz;
   }
 
   @Override
@@ -119,7 +147,11 @@ import java.nio.ByteBuffer;
     // endBuffer as full as possible, the output should be any surplus bytes currently in endBuffer
     // followed by any surplus bytes in the new inputBuffer.
     int remainingBytesToOutput = endBufferSize + remaining - endBuffer.length;
-    ByteBuffer buffer = replaceOutputBuffer(remainingBytesToOutput);
+    if (buffer.capacity() < remainingBytesToOutput) {
+      buffer = ByteBuffer.allocateDirect(remainingBytesToOutput).order(ByteOrder.nativeOrder());
+    } else {
+      buffer.clear();
+    }
 
     // Output from endBuffer.
     int endBufferBytesToOutput = Util.constrainValue(remainingBytesToOutput, 0, endBufferSize);
@@ -140,31 +172,48 @@ import java.nio.ByteBuffer;
     endBufferSize += remaining;
 
     buffer.flip();
+    outputBuffer = buffer;
+  }
+
+  @Override
+  public void queueEndOfStream() {
+    inputEnded = true;
   }
 
   @SuppressWarnings("ReferenceEquality")
   @Override
   public ByteBuffer getOutput() {
-    if (super.isEnded() && endBufferSize > 0) {
+    ByteBuffer outputBuffer = this.outputBuffer;
+    if (inputEnded && endBufferSize > 0 && outputBuffer == EMPTY_BUFFER) {
       // Because audio processors may be drained in the middle of the stream we assume that the
-      // contents of the end buffer need to be output. For gapless transitions, configure will be
-      // always be called, which clears the end buffer as needed. When audio is actually ending we
-      // play the padding data which is incorrect. This behavior can be fixed once we have the
-      // timestamps associated with input buffers.
-      replaceOutputBuffer(endBufferSize).put(endBuffer, 0, endBufferSize).flip();
+      // contents of the end buffer need to be output. Gapless transitions don't involve a call to
+      // queueEndOfStream so won't be affected. When audio is actually ending we play the padding
+      // data which is incorrect. This behavior can be fixed once we have the timestamps associated
+      // with input buffers.
+      if (buffer.capacity() < endBufferSize) {
+        buffer = ByteBuffer.allocateDirect(endBufferSize).order(ByteOrder.nativeOrder());
+      } else {
+        buffer.clear();
+      }
+      buffer.put(endBuffer, 0, endBufferSize);
       endBufferSize = 0;
+      buffer.flip();
+      outputBuffer = buffer;
     }
-    return super.getOutput();
+    this.outputBuffer = EMPTY_BUFFER;
+    return outputBuffer;
   }
 
   @SuppressWarnings("ReferenceEquality")
   @Override
   public boolean isEnded() {
-    return super.isEnded() && endBufferSize == 0;
+    return inputEnded && endBufferSize == 0 && outputBuffer == EMPTY_BUFFER;
   }
 
   @Override
-  protected void onFlush() {
+  public void flush() {
+    outputBuffer = EMPTY_BUFFER;
+    inputEnded = false;
     if (receivedInputSinceConfigure) {
       // Audio processors are flushed after initial configuration, so we leave the pending trim
       // start byte count unmodified if the processor was just configured. Otherwise we (possibly
@@ -177,7 +226,11 @@ import java.nio.ByteBuffer;
   }
 
   @Override
-  protected void onReset() {
+  public void reset() {
+    flush();
+    buffer = EMPTY_BUFFER;
+    channelCount = Format.NO_VALUE;
+    sampleRateHz = Format.NO_VALUE;
     endBuffer = Util.EMPTY_BYTE_ARRAY;
   }
 

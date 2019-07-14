@@ -15,8 +15,8 @@
  */
 package com.kaltura.android.exoplayer2.upstream.cache;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import java.io.File;
 
@@ -45,12 +45,13 @@ public class CacheSpan implements Comparable<CacheSpan> {
    * The file corresponding to this {@link CacheSpan}, or null if {@link #isCached} is false.
    */
   public final @Nullable File file;
-  /** The last touch timestamp, or {@link C#TIME_UNSET} if {@link #isCached} is false. */
-  public final long lastTouchTimestamp;
+  /**
+   * The last access timestamp, or {@link C#TIME_UNSET} if {@link #isCached} is false.
+   */
+  public final long lastAccessTimestamp;
 
   /**
-   * Creates a hole CacheSpan which isn't cached, has no last touch timestamp and no file
-   * associated.
+   * Creates a hole CacheSpan which isn't cached, has no last access time and no file associated.
    *
    * @param key The cache key that uniquely identifies the original stream.
    * @param position The position of the {@link CacheSpan} in the original stream.
@@ -68,18 +69,18 @@ public class CacheSpan implements Comparable<CacheSpan> {
    * @param position The position of the {@link CacheSpan} in the original stream.
    * @param length The length of the {@link CacheSpan}, or {@link C#LENGTH_UNSET} if this is an
    *     open-ended hole.
-   * @param lastTouchTimestamp The last touch timestamp, or {@link C#TIME_UNSET} if {@link
+   * @param lastAccessTimestamp The last access timestamp, or {@link C#TIME_UNSET} if {@link
    *     #isCached} is false.
    * @param file The file corresponding to this {@link CacheSpan}, or null if it's a hole.
    */
   public CacheSpan(
-      String key, long position, long length, long lastTouchTimestamp, @Nullable File file) {
+      String key, long position, long length, long lastAccessTimestamp, @Nullable File file) {
     this.key = key;
     this.position = position;
     this.length = length;
     this.isCached = file != null;
     this.file = file;
-    this.lastTouchTimestamp = lastTouchTimestamp;
+    this.lastAccessTimestamp = lastAccessTimestamp;
   }
 
   /**

@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.video.spherical;
 
-import androidx.annotation.IntDef;
+import android.support.annotation.IntDef;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.C.StereoMode;
 import com.kaltura.android.exoplayer2.util.Assertions;

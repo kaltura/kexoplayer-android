@@ -16,16 +16,14 @@
 package com.kaltura.android.exoplayer2.offline;
 
 import android.net.Uri;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import android.util.Pair;
+import android.support.annotation.NonNull;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.upstream.DataSource;
 import com.kaltura.android.exoplayer2.upstream.DataSpec;
 import com.kaltura.android.exoplayer2.upstream.cache.Cache;
 import com.kaltura.android.exoplayer2.upstream.cache.CacheDataSource;
-import com.kaltura.android.exoplayer2.upstream.cache.CacheKeyFactory;
 import com.kaltura.android.exoplayer2.upstream.cache.CacheUtil;
+import com.kaltura.android.exoplayer2.upstream.cache.CacheUtil.CachingCounters;
 import com.kaltura.android.exoplayer2.util.PriorityTaskManager;
 import com.kaltura.android.exoplayer2.util.Util;
 import java.io.IOException;
@@ -43,7 +41,6 @@ public abstract class SegmentDownloader<M extends FilterableManifest<M>> impleme
 
   /** Smallest unit of content to be downloaded. */
   protected static class Segment implements Comparable<Segment> {
-
     /** The start time of the segment in microseconds. */
     public final long startTimeUs;
 
@@ -64,14 +61,17 @@ public abstract class SegmentDownloader<M extends FilterableManifest<M>> impleme
 
   private static final int BUFFER_SIZE_BYTES = 128 * 1024;
 
-  private final DataSpec manifestDataSpec;
+  private final Uri manifestUri;
+  private final PriorityTaskManager priorityTaskManager;
   private final Cache cache;
   private final CacheDataSource dataSource;
   private final CacheDataSource offlineDataSource;
-  private final CacheKeyFactory cacheKeyFactory;
-  private final PriorityTaskManager priorityTaskManager;
   private final ArrayList<StreamKey> streamKeys;
   private final AtomicBoolean isCanceled;
+
+  private volatile int totalSegments;
+  private volatile int downloadedSegments;
+  private volatile long downloadedBytes;
 
   /**
    * @param manifestUri The {@link Uri} of the manifest to be downloaded.
@@ -81,13 +81,13 @@ public abstract class SegmentDownloader<M extends FilterableManifest<M>> impleme
    */
   public SegmentDownloader(
       Uri manifestUri, List<StreamKey> streamKeys, DownloaderConstructorHelper constructorHelper) {
-    this.manifestDataSpec = getCompressibleDataSpec(manifestUri);
+    this.manifestUri = manifestUri;
     this.streamKeys = new ArrayList<>(streamKeys);
     this.cache = constructorHelper.getCache();
-    this.dataSource = constructorHelper.createCacheDataSource();
-    this.offlineDataSource = constructorHelper.createOfflineCacheDataSource();
-    this.cacheKeyFactory = constructorHelper.getCacheKeyFactory();
+    this.dataSource = constructorHelper.buildCacheDataSource(false);
+    this.offlineDataSource = constructorHelper.buildCacheDataSource(true);
     this.priorityTaskManager = constructorHelper.getPriorityTaskManager();
+    totalSegments = C.LENGTH_UNSET;
     isCanceled = new AtomicBoolean();
   }
 
@@ -98,71 +98,33 @@ public abstract class SegmentDownloader<M extends FilterableManifest<M>> impleme
    * @throws IOException Thrown when there is an error downloading.
    * @throws InterruptedException If the thread has been interrupted.
    */
+  // downloadedSegments and downloadedBytes are only written from this method, and this method
+  // should not be called from more than one thread. Hence non-atomic updates are valid.
+  @SuppressWarnings("NonAtomicVolatileUpdate")
   @Override
-  public final void download(@Nullable ProgressListener progressListener)
-      throws IOException, InterruptedException {
+  public final void download() throws IOException, InterruptedException {
     priorityTaskManager.add(C.PRIORITY_DOWNLOAD);
+
     try {
-      // Get the manifest and all of the segments.
-      M manifest = getManifest(dataSource, manifestDataSpec);
-      if (!streamKeys.isEmpty()) {
-        manifest = manifest.copy(streamKeys);
-      }
-      List<Segment> segments = getSegments(dataSource, manifest, /* allowIncompleteList= */ false);
-
-      // Scan the segments, removing any that are fully downloaded.
-      int totalSegments = segments.size();
-      int segmentsDownloaded = 0;
-      long contentLength = 0;
-      long bytesDownloaded = 0;
-      for (int i = segments.size() - 1; i >= 0; i--) {
-        Segment segment = segments.get(i);
-        Pair<Long, Long> segmentLengthAndBytesDownloaded =
-            CacheUtil.getCached(segment.dataSpec, cache, cacheKeyFactory);
-        long segmentLength = segmentLengthAndBytesDownloaded.first;
-        long segmentBytesDownloaded = segmentLengthAndBytesDownloaded.second;
-        bytesDownloaded += segmentBytesDownloaded;
-        if (segmentLength != C.LENGTH_UNSET) {
-          if (segmentLength == segmentBytesDownloaded) {
-            // The segment is fully downloaded.
-            segmentsDownloaded++;
-            segments.remove(i);
-          }
-          if (contentLength != C.LENGTH_UNSET) {
-            contentLength += segmentLength;
-          }
-        } else {
-          contentLength = C.LENGTH_UNSET;
-        }
-      }
+      List<Segment> segments = initDownload();
       Collections.sort(segments);
-
-      // Download the segments.
-      ProgressNotifier progressNotifier = null;
-      if (progressListener != null) {
-        progressNotifier =
-            new ProgressNotifier(
-                progressListener,
-                contentLength,
-                totalSegments,
-                bytesDownloaded,
-                segmentsDownloaded);
-      }
       byte[] buffer = new byte[BUFFER_SIZE_BYTES];
+      CachingCounters cachingCounters = new CachingCounters();
       for (int i = 0; i < segments.size(); i++) {
-        CacheUtil.cache(
-            segments.get(i).dataSpec,
-            cache,
-            cacheKeyFactory,
-            dataSource,
-            buffer,
-            priorityTaskManager,
-            C.PRIORITY_DOWNLOAD,
-            progressNotifier,
-            isCanceled,
-            true);
-        if (progressNotifier != null) {
-          progressNotifier.onSegmentDownloaded();
+        try {
+          CacheUtil.cache(
+              segments.get(i).dataSpec,
+              cache,
+              dataSource,
+              buffer,
+              priorityTaskManager,
+              C.PRIORITY_DOWNLOAD,
+              cachingCounters,
+              isCanceled,
+              true);
+          downloadedSegments++;
+        } finally {
+          downloadedBytes += cachingCounters.newlyCachedBytes;
         }
       }
     } finally {
@@ -176,18 +138,34 @@ public abstract class SegmentDownloader<M extends FilterableManifest<M>> impleme
   }
 
   @Override
+  public final long getDownloadedBytes() {
+    return downloadedBytes;
+  }
+
+  @Override
+  public final float getDownloadPercentage() {
+    // Take local snapshot of the volatile fields
+    int totalSegments = this.totalSegments;
+    int downloadedSegments = this.downloadedSegments;
+    if (totalSegments == C.LENGTH_UNSET || downloadedSegments == C.LENGTH_UNSET) {
+      return C.PERCENTAGE_UNSET;
+    }
+    return totalSegments == 0 ? 100f : (downloadedSegments * 100f) / totalSegments;
+  }
+
+  @Override
   public final void remove() throws InterruptedException {
     try {
-      M manifest = getManifest(offlineDataSource, manifestDataSpec);
+      M manifest = getManifest(offlineDataSource, manifestUri);
       List<Segment> segments = getSegments(offlineDataSource, manifest, true);
       for (int i = 0; i < segments.size(); i++) {
-        removeDataSpec(segments.get(i).dataSpec);
+        removeUri(segments.get(i).dataSpec.uri);
       }
     } catch (IOException e) {
       // Ignore exceptions when removing.
     } finally {
       // Always attempt to remove the manifest.
-      removeDataSpec(manifestDataSpec);
+      removeUri(manifestUri);
     }
   }
 
@@ -197,11 +175,11 @@ public abstract class SegmentDownloader<M extends FilterableManifest<M>> impleme
    * Loads and parses the manifest.
    *
    * @param dataSource The {@link DataSource} through which to load.
-   * @param dataSpec The manifest {@link DataSpec}.
+   * @param uri The manifest uri.
    * @return The manifest.
    * @throws IOException If an error occurs reading data.
    */
-  protected abstract M getManifest(DataSource dataSource, DataSpec dataSpec) throws IOException;
+  protected abstract M getManifest(DataSource dataSource, Uri uri) throws IOException;
 
   /**
    * Returns a list of all downloadable {@link Segment}s for a given manifest.
@@ -211,70 +189,43 @@ public abstract class SegmentDownloader<M extends FilterableManifest<M>> impleme
    * @param allowIncompleteList Whether to continue in the case that a load error prevents all
    *     segments from being listed. If true then a partial segment list will be returned. If false
    *     an {@link IOException} will be thrown.
-   * @return The list of downloadable {@link Segment}s.
    * @throws InterruptedException Thrown if the thread was interrupted.
    * @throws IOException Thrown if {@code allowPartialIndex} is false and a load error occurs, or if
    *     the media is not in a form that allows for its segments to be listed.
+   * @return The list of downloadable {@link Segment}s.
    */
   protected abstract List<Segment> getSegments(
       DataSource dataSource, M manifest, boolean allowIncompleteList)
       throws InterruptedException, IOException;
 
-  private void removeDataSpec(DataSpec dataSpec) {
-    CacheUtil.remove(dataSpec, cache, cacheKeyFactory);
-  }
-
-  protected static DataSpec getCompressibleDataSpec(Uri uri) {
-    return new DataSpec(
-        uri,
-        /* absoluteStreamPosition= */ 0,
-        /* length= */ C.LENGTH_UNSET,
-        /* key= */ null,
-        /* flags= */ DataSpec.FLAG_ALLOW_GZIP);
-  }
-
-  private static final class ProgressNotifier implements CacheUtil.ProgressListener {
-
-    private final ProgressListener progressListener;
-
-    private final long contentLength;
-    private final int totalSegments;
-
-    private long bytesDownloaded;
-    private int segmentsDownloaded;
-
-    public ProgressNotifier(
-        ProgressListener progressListener,
-        long contentLength,
-        int totalSegments,
-        long bytesDownloaded,
-        int segmentsDownloaded) {
-      this.progressListener = progressListener;
-      this.contentLength = contentLength;
-      this.totalSegments = totalSegments;
-      this.bytesDownloaded = bytesDownloaded;
-      this.segmentsDownloaded = segmentsDownloaded;
+  /** Initializes the download, returning a list of {@link Segment}s that need to be downloaded. */
+  // Writes to downloadedSegments and downloadedBytes are safe. See the comment on download().
+  @SuppressWarnings("NonAtomicVolatileUpdate")
+  private List<Segment> initDownload() throws IOException, InterruptedException {
+    M manifest = getManifest(dataSource, manifestUri);
+    if (!streamKeys.isEmpty()) {
+      manifest = manifest.copy(streamKeys);
     }
-
-    @Override
-    public void onProgress(long requestLength, long bytesCached, long newBytesCached) {
-      bytesDownloaded += newBytesCached;
-      progressListener.onProgress(contentLength, bytesDownloaded, getPercentDownloaded());
-    }
-
-    public void onSegmentDownloaded() {
-      segmentsDownloaded++;
-      progressListener.onProgress(contentLength, bytesDownloaded, getPercentDownloaded());
-    }
-
-    private float getPercentDownloaded() {
-      if (contentLength != C.LENGTH_UNSET && contentLength != 0) {
-        return (bytesDownloaded * 100f) / contentLength;
-      } else if (totalSegments != 0) {
-        return (segmentsDownloaded * 100f) / totalSegments;
-      } else {
-        return C.PERCENTAGE_UNSET;
+    List<Segment> segments = getSegments(dataSource, manifest, /* allowIncompleteList= */ false);
+    CachingCounters cachingCounters = new CachingCounters();
+    totalSegments = segments.size();
+    downloadedSegments = 0;
+    downloadedBytes = 0;
+    for (int i = segments.size() - 1; i >= 0; i--) {
+      Segment segment = segments.get(i);
+      CacheUtil.getCached(segment.dataSpec, cache, cachingCounters);
+      downloadedBytes += cachingCounters.alreadyCachedBytes;
+      if (cachingCounters.alreadyCachedBytes == cachingCounters.contentLength) {
+        // The segment is fully downloaded.
+        downloadedSegments++;
+        segments.remove(i);
       }
     }
+    return segments;
   }
+
+  private void removeUri(Uri uri) {
+    CacheUtil.remove(cache, CacheUtil.generateKey(uri));
+  }
+
 }

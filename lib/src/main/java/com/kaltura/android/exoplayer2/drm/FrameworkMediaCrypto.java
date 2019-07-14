@@ -15,35 +15,50 @@
  */
 package com.kaltura.android.exoplayer2.drm;
 
+import android.annotation.TargetApi;
 import android.media.MediaCrypto;
-import java.util.UUID;
+import com.kaltura.android.exoplayer2.util.Assertions;
 
 /**
- * An {@link ExoMediaCrypto} implementation that contains the necessary information to build or
- * update a framework {@link MediaCrypto}.
+ * An {@link ExoMediaCrypto} implementation that wraps the framework {@link MediaCrypto}.
  */
+@TargetApi(16)
 public final class FrameworkMediaCrypto implements ExoMediaCrypto {
 
-  /** The DRM scheme UUID. */
-  public final UUID uuid;
-  /** The DRM session id. */
-  public final byte[] sessionId;
-  /**
-   * Whether to allow use of insecure decoder components even if the underlying platform says
-   * otherwise.
-   */
-  public final boolean forceAllowInsecureDecoderComponents;
+  private final MediaCrypto mediaCrypto;
+  private final boolean forceAllowInsecureDecoderComponents;
 
   /**
-   * @param uuid The DRM scheme UUID.
-   * @param sessionId The DRM session id.
-   * @param forceAllowInsecureDecoderComponents Whether to allow use of insecure decoder components
-   *     even if the underlying platform says otherwise.
+   * @param mediaCrypto The {@link MediaCrypto} to wrap.
    */
-  public FrameworkMediaCrypto(
-      UUID uuid, byte[] sessionId, boolean forceAllowInsecureDecoderComponents) {
-    this.uuid = uuid;
-    this.sessionId = sessionId;
+  public FrameworkMediaCrypto(MediaCrypto mediaCrypto) {
+    this(mediaCrypto, false);
+  }
+
+  /**
+   * @param mediaCrypto The {@link MediaCrypto} to wrap.
+   * @param forceAllowInsecureDecoderComponents Whether to force
+   *     {@link #requiresSecureDecoderComponent(String)} to return {@code false}, rather than
+   *     {@link MediaCrypto#requiresSecureDecoderComponent(String)} of the wrapped
+   *     {@link MediaCrypto}.
+   */
+  public FrameworkMediaCrypto(MediaCrypto mediaCrypto,
+      boolean forceAllowInsecureDecoderComponents) {
+    this.mediaCrypto = Assertions.checkNotNull(mediaCrypto);
     this.forceAllowInsecureDecoderComponents = forceAllowInsecureDecoderComponents;
   }
+
+  /**
+   * Returns the wrapped {@link MediaCrypto}.
+   */
+  public MediaCrypto getWrappedMediaCrypto() {
+    return mediaCrypto;
+  }
+
+  @Override
+  public boolean requiresSecureDecoderComponent(String mimeType) {
+    return !forceAllowInsecureDecoderComponents
+        && mediaCrypto.requiresSecureDecoderComponent(mimeType);
+  }
+
 }

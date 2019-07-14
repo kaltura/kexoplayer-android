@@ -15,9 +15,9 @@
  */
 package com.kaltura.android.exoplayer2.source.hls.playlist;
 
-import androidx.annotation.IntDef;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import android.support.annotation.IntDef;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.drm.DrmInitData;
 import com.kaltura.android.exoplayer2.offline.StreamKey;
@@ -43,7 +43,7 @@ public final class HlsMediaPlaylist extends HlsPlaylist {
      * the media playlist does not define a media section for this segment. The same instance is
      * used for all segments that share an EXT-X-MAP tag.
      */
-    @Nullable public final Segment initializationSegment;
+    public final @Nullable Segment initializationSegment;
     /** The duration of the segment in microseconds, as defined by #EXTINF. */
     public final long durationUs;
     /** The human readable title of the segment. */
@@ -60,17 +60,17 @@ public final class HlsMediaPlaylist extends HlsPlaylist {
      * DRM initialization data for sample decryption, or null if the segment does not use CDM-DRM
      * protection.
      */
-    @Nullable public final DrmInitData drmInitData;
+    public final @Nullable DrmInitData drmInitData;
     /**
      * The encryption identity key uri as defined by #EXT-X-KEY, or null if the segment does not use
      * full segment encryption with identity key.
      */
-    @Nullable public final String fullSegmentEncryptionKeyUri;
+    public final @Nullable String fullSegmentEncryptionKeyUri;
     /**
      * The encryption initialization vector as defined by #EXT-X-KEY, or null if the segment is not
      * encrypted.
      */
-    @Nullable public final String encryptionIV;
+    public final @Nullable String encryptionIV;
     /**
      * The segment's byte range offset, as defined by #EXT-X-BYTERANGE.
      */
@@ -88,15 +88,8 @@ public final class HlsMediaPlaylist extends HlsPlaylist {
      * @param uri See {@link #url}.
      * @param byterangeOffset See {@link #byterangeOffset}.
      * @param byterangeLength See {@link #byterangeLength}.
-     * @param fullSegmentEncryptionKeyUri See {@link #fullSegmentEncryptionKeyUri}.
-     * @param encryptionIV See {@link #encryptionIV}.
      */
-    public Segment(
-        String uri,
-        long byterangeOffset,
-        long byterangeLength,
-        String fullSegmentEncryptionKeyUri,
-        String encryptionIV) {
+    public Segment(String uri, long byterangeOffset, long byterangeLength) {
       this(
           uri,
           /* initializationSegment= */ null,
@@ -105,8 +98,8 @@ public final class HlsMediaPlaylist extends HlsPlaylist {
           /* relativeDiscontinuitySequence= */ -1,
           /* relativeStartTimeUs= */ C.TIME_UNSET,
           /* drmInitData= */ null,
-          fullSegmentEncryptionKeyUri,
-          encryptionIV,
+          /* fullSegmentEncryptionKeyUri= */ null,
+          /* encryptionIV= */ null,
           byterangeOffset,
           byterangeLength,
           /* hasGapTag= */ false);
@@ -222,7 +215,7 @@ public final class HlsMediaPlaylist extends HlsPlaylist {
    * Contains the CDM protection schemes used by segments in this playlist. Does not contain any key
    * acquisition data. Null if none of the segments in the playlist is CDM-encrypted.
    */
-  @Nullable public final DrmInitData protectionSchemes;
+  public final @Nullable DrmInitData protectionSchemes;
   /**
    * The list of segments in the playlist.
    */

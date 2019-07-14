@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.extractor.mp4;
 
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.util.Log;
 import com.kaltura.android.exoplayer2.util.ParsableByteArray;
 import java.nio.ByteBuffer;

@@ -16,7 +16,7 @@
 package com.kaltura.android.exoplayer2.upstream;
 
 import android.net.Uri;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import java.io.IOException;
 import java.net.DatagramPacket;

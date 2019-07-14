@@ -15,8 +15,8 @@
  */
 package com.kaltura.android.exoplayer2.source;
 
-import androidx.annotation.IntDef;
-import androidx.annotation.Nullable;
+import android.support.annotation.IntDef;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.Timeline;
 import com.kaltura.android.exoplayer2.upstream.Allocator;
 import com.kaltura.android.exoplayer2.upstream.TransferListener;

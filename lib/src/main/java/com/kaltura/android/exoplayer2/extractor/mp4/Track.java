@@ -15,8 +15,8 @@
  */
 package com.kaltura.android.exoplayer2.extractor.mp4;
 
-import androidx.annotation.IntDef;
-import androidx.annotation.Nullable;
+import android.support.annotation.IntDef;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.Format;
 import java.lang.annotation.Documented;
@@ -128,18 +128,4 @@ public final class Track {
         : sampleDescriptionEncryptionBoxes[sampleDescriptionIndex];
   }
 
-  public Track copyWithFormat(Format format) {
-    return new Track(
-        id,
-        type,
-        timescale,
-        movieTimescale,
-        durationUs,
-        format,
-        sampleTransformation,
-        sampleDescriptionEncryptionBoxes,
-        nalUnitLengthFieldLength,
-        editListDurations,
-        editListMediaTimes);
-  }
 }

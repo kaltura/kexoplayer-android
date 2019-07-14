@@ -15,7 +15,6 @@
  */
 package com.kaltura.android.exoplayer2.extractor.ogg;
 
-import androidx.annotation.VisibleForTesting;
 import com.kaltura.android.exoplayer2.ParserException;
 import com.kaltura.android.exoplayer2.extractor.ExtractorInput;
 import com.kaltura.android.exoplayer2.extractor.SeekMap;
@@ -27,8 +26,10 @@ import java.io.IOException;
 /** Seeks in an Ogg stream. */
 /* package */ final class DefaultOggSeeker implements OggSeeker {
 
-  @VisibleForTesting public static final int MATCH_RANGE = 72000;
-  @VisibleForTesting public static final int MATCH_BYTE_RANGE = 100000;
+  //@VisibleForTesting
+  public static final int MATCH_RANGE = 72000;
+  //@VisibleForTesting
+  public static final int MATCH_BYTE_RANGE = 100000;
   private static final int DEFAULT_OFFSET = 30000;
 
   private static final int STATE_SEEK_TO_END = 0;
@@ -132,7 +133,7 @@ import java.io.IOException;
     return totalGranules != 0 ? new OggSeekMap() : null;
   }
 
-  @VisibleForTesting
+  //@VisibleForTesting
   public void resetSeeking() {
     start = startPosition;
     end = endPosition;
@@ -149,12 +150,12 @@ import java.io.IOException;
    *
    * @param targetGranule the target granule position to seek to.
    * @param input the {@link ExtractorInput} to read from.
-   * @return the position to seek the {@link ExtractorInput} to for a next call or -(currentGranule
-   *     + 2) if it's close enough to skip to the target page.
+   * @return the position to seek the {@link ExtractorInput} to for a next call or
+   *     -(currentGranule + 2) if it's close enough to skip to the target page.
    * @throws IOException thrown if reading from the input fails.
    * @throws InterruptedException thrown if interrupted while reading from the input.
    */
-  @VisibleForTesting
+  //@VisibleForTesting
   public long getNextSeekPosition(long targetGranule, ExtractorInput input)
       throws IOException, InterruptedException {
     if (start == end) {
@@ -249,7 +250,7 @@ import java.io.IOException;
    * @throws InterruptedException If the thread is interrupted.
    * @throws EOFException If the next page can't be found before the end of the input.
    */
-  @VisibleForTesting
+  // @VisibleForTesting
   void skipToNextPage(ExtractorInput input) throws IOException, InterruptedException {
     if (!skipToNextPage(input, endPosition)) {
       // Not found until eof.
@@ -266,7 +267,7 @@ import java.io.IOException;
    * @throws IOException thrown if peeking/reading from the input fails.
    * @throws InterruptedException thrown if interrupted while peeking/reading from the input.
    */
-  @VisibleForTesting
+  // @VisibleForTesting
   boolean skipToNextPage(ExtractorInput input, long limit)
       throws IOException, InterruptedException {
     limit = Math.min(limit + 3, endPosition);
@@ -306,7 +307,7 @@ import java.io.IOException;
    * @throws IOException If reading from the input fails.
    * @throws InterruptedException If the thread is interrupted.
    */
-  @VisibleForTesting
+  // @VisibleForTesting
   long readGranuleOfLastPage(ExtractorInput input) throws IOException, InterruptedException {
     skipToNextPage(input);
     pageHeader.reset();
@@ -318,8 +319,8 @@ import java.io.IOException;
   }
 
   /**
-   * Skips to the position of the start of the page containing the {@code targetGranule} and returns
-   * the granule of the page previous to the target page.
+   * Skips to the position of the start of the page containing the {@code targetGranule} and
+   * returns the granule of the page previous to the target page.
    *
    * @param input the {@link ExtractorInput} to read from.
    * @param targetGranule the target granule.
@@ -330,7 +331,7 @@ import java.io.IOException;
    * @throws IOException thrown if reading from the input fails.
    * @throws InterruptedException thrown if interrupted while reading from the input.
    */
-  @VisibleForTesting
+  //@VisibleForTesting
   long skipToPageOfGranule(ExtractorInput input, long targetGranule, long currentGranule)
       throws IOException, InterruptedException {
     pageHeader.populate(input, false);

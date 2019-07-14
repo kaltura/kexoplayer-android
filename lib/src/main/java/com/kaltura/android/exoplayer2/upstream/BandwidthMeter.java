@@ -16,7 +16,7 @@
 package com.kaltura.android.exoplayer2.upstream;
 
 import android.os.Handler;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 
 /**
  * Provides estimates of the currently available bandwidth.
@@ -29,33 +29,30 @@ public interface BandwidthMeter {
   interface EventListener {
 
     /**
-     * Called periodically to indicate that bytes have been transferred or the estimated bitrate has
-     * changed.
+     * Called periodically to indicate that bytes have been transferred.
      *
      * <p>Note: The estimated bitrate is typically derived from more information than just {@code
      * bytes} and {@code elapsedMs}.
      *
-     * @param elapsedMs The time taken to transfer {@code bytesTransferred}, in milliseconds. This
-     *     is at most the elapsed time since the last callback, but may be less if there were
-     *     periods during which data was not being transferred.
-     * @param bytesTransferred The number of bytes transferred since the last callback.
-     * @param bitrateEstimate The estimated bitrate in bits/sec.
+     * @param elapsedMs The time taken to transfer the bytes, in milliseconds.
+     * @param bytes The number of bytes transferred.
+     * @param bitrate The estimated bitrate in bits/sec.
      */
-    void onBandwidthSample(int elapsedMs, long bytesTransferred, long bitrateEstimate);
+    void onBandwidthSample(int elapsedMs, long bytes, long bitrate);
   }
 
-  /** Returns the estimated bitrate. */
+  /** Returns the estimated bandwidth in bits/sec. */
   long getBitrateEstimate();
 
   /**
    * Returns the {@link TransferListener} that this instance uses to gather bandwidth information
-   * from data transfers. May be null if the implementation does not listen to data transfers.
+   * from data transfers. May be null, if no transfer listener is used.
    */
   @Nullable
   TransferListener getTransferListener();
 
   /**
-   * Adds an {@link EventListener}.
+   * Adds an {@link EventListener} to be informed of bandwidth samples.
    *
    * @param eventHandler A handler for events.
    * @param eventListener A listener of events.

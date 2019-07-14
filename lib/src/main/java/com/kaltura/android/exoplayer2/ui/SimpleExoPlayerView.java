@@ -17,15 +17,17 @@ package com.kaltura.android.exoplayer2.ui;
 
 import com.kaltura.android.exoplayer2.R;
 
+import android.annotation.TargetApi;
 import android.content.Context;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import com.kaltura.android.exoplayer2.Player;
 import com.kaltura.android.exoplayer2.SimpleExoPlayer;
 
 /** @deprecated Use {@link PlayerView}. */
 @Deprecated
+@TargetApi(16)
 public final class SimpleExoPlayerView extends PlayerView {
 
   public SimpleExoPlayerView(Context context) {

@@ -17,7 +17,7 @@ package com.kaltura.android.exoplayer2.audio;
 
 import android.os.Handler;
 import android.os.SystemClock;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.Format;
 import com.kaltura.android.exoplayer2.Renderer;
@@ -147,7 +147,6 @@ public interface AudioRendererEventListener {
      * Invokes {@link AudioRendererEventListener#onAudioDisabled(DecoderCounters)}.
      */
     public void disabled(final DecoderCounters counters) {
-      counters.ensureUpdated();
       if (listener != null) {
         handler.post(
             () -> {

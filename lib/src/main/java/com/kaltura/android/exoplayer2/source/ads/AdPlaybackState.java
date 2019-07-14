@@ -16,8 +16,8 @@
 package com.kaltura.android.exoplayer2.source.ads;
 
 import android.net.Uri;
-import androidx.annotation.CheckResult;
-import androidx.annotation.IntDef;
+import android.support.annotation.CheckResult;
+import android.support.annotation.IntDef;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.util.Assertions;
 import java.lang.annotation.Documented;
@@ -310,9 +310,7 @@ public final class AdPlaybackState {
    * unplayed. Returns {@link C#INDEX_UNSET} if the ad group at or before {@code positionUs} has no
    * ads remaining to be played, or if there is no such ad group.
    *
-   * @param positionUs The position at or before which to find an ad group, in microseconds, or
-   *     {@link C#TIME_END_OF_SOURCE} for the end of the stream (in which case the index of any
-   *     unplayed postroll ad group will be returned).
+   * @param positionUs The position at or before which to find an ad group, in microseconds.
    * @return The index of the ad group, or {@link C#INDEX_UNSET}.
    */
   public int getAdGroupIndexForPositionUs(long positionUs) {
@@ -329,18 +327,10 @@ public final class AdPlaybackState {
    * Returns the index of the next ad group after {@code positionUs} that has ads remaining to be
    * played. Returns {@link C#INDEX_UNSET} if there is no such ad group.
    *
-   * @param positionUs The position after which to find an ad group, in microseconds, or {@link
-   *     C#TIME_END_OF_SOURCE} for the end of the stream (in which case there can be no ad group
-   *     after the position).
-   * @param periodDurationUs The duration of the containing period in microseconds, or {@link
-   *     C#TIME_UNSET} if not known.
+   * @param positionUs The position after which to find an ad group, in microseconds.
    * @return The index of the ad group, or {@link C#INDEX_UNSET}.
    */
-  public int getAdGroupIndexAfterPositionUs(long positionUs, long periodDurationUs) {
-    if (positionUs == C.TIME_END_OF_SOURCE
-        || (periodDurationUs != C.TIME_UNSET && positionUs >= periodDurationUs)) {
-      return C.INDEX_UNSET;
-    }
+  public int getAdGroupIndexAfterPositionUs(long positionUs) {
     // Use a linear search as the array elements may not be increasing due to TIME_END_OF_SOURCE.
     // In practice we expect there to be few ad groups so the search shouldn't be expensive.
     int index = 0;
@@ -467,10 +457,6 @@ public final class AdPlaybackState {
   }
 
   private boolean isPositionBeforeAdGroup(long positionUs, int adGroupIndex) {
-    if (positionUs == C.TIME_END_OF_SOURCE) {
-      // The end of the content is at (but not before) any postroll ad, and after any other ads.
-      return false;
-    }
     long adGroupPositionUs = adGroupTimesUs[adGroupIndex];
     if (adGroupPositionUs == C.TIME_END_OF_SOURCE) {
       return contentDurationUs == C.TIME_UNSET || positionUs < contentDurationUs;

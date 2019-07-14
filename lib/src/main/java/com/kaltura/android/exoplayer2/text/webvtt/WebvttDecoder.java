@@ -80,7 +80,10 @@ public final class WebvttDecoder extends SimpleSubtitleDecoder {
           throw new SubtitleDecoderException("A style block was found after the first cue.");
         }
         parsableWebvttData.readLine(); // Consume the "STYLE" header.
-        definedStyles.addAll(cssParser.parseBlock(parsableWebvttData));
+        WebvttCssStyle styleBlock = cssParser.parseBlock(parsableWebvttData);
+        if (styleBlock != null) {
+          definedStyles.add(styleBlock);
+        }
       } else if (event == EVENT_CUE) {
         if (cueParser.parseCue(parsableWebvttData, webvttCueBuilder, definedStyles)) {
           subtitles.add(webvttCueBuilder.build());

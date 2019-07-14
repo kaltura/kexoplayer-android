@@ -15,16 +15,16 @@
  */
 package com.kaltura.android.exoplayer2.ui.spherical;
 
-import static com.kaltura.android.exoplayer2.util.GlUtil.checkGlError;
+import static com.kaltura.android.exoplayer2.ui.spherical.GlUtil.checkGlError;
 
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.Format;
+import com.kaltura.android.exoplayer2.ui.spherical.ProjectionRenderer.EyeType;
 import com.kaltura.android.exoplayer2.util.Assertions;
-import com.kaltura.android.exoplayer2.util.GlUtil;
 import com.kaltura.android.exoplayer2.util.TimedValueQueue;
 import com.kaltura.android.exoplayer2.video.VideoFrameMetadataListener;
 import com.kaltura.android.exoplayer2.video.spherical.CameraMotionListener;
@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /** Renders a GL Scene. */
-public final class SceneRenderer implements VideoFrameMetadataListener, CameraMotionListener {
+/*package*/ class SceneRenderer implements VideoFrameMetadataListener, CameraMotionListener {
 
   private final AtomicBoolean frameAvailable;
   private final AtomicBoolean resetRotationAtNextFrame;
@@ -102,10 +102,9 @@ public final class SceneRenderer implements VideoFrameMetadataListener, CameraMo
    * Draws the scene with a given eye pose and type.
    *
    * @param viewProjectionMatrix 16 element GL matrix.
-   * @param rightEye Whether the right eye view should be drawn. If {@code false}, the left eye view
-   *     is drawn.
+   * @param eyeType An {@link EyeType} value
    */
-  public void drawFrame(float[] viewProjectionMatrix, boolean rightEye) {
+  public void drawFrame(float[] viewProjectionMatrix, int eyeType) {
     // glClear isn't strictly necessary when rendering fully spherical panoramas, but it can improve
     // performance on tiled renderers by causing the GPU to discard previous data.
     GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
@@ -128,12 +127,7 @@ public final class SceneRenderer implements VideoFrameMetadataListener, CameraMo
       }
     }
     Matrix.multiplyMM(tempMatrix, 0, viewProjectionMatrix, 0, rotationMatrix, 0);
-    projectionRenderer.draw(textureId, tempMatrix, rightEye);
-  }
-
-  /** Cleans up the GL resources. */
-  public void shutdown() {
-    projectionRenderer.shutdown();
+    projectionRenderer.draw(textureId, tempMatrix, eyeType);
   }
 
   // Methods called on playback thread.

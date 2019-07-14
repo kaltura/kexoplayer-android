@@ -25,11 +25,6 @@ package com.kaltura.android.exoplayer2.upstream.cache;
 public final class NoOpCacheEvictor implements CacheEvictor {
 
   @Override
-  public boolean requiresCacheSpanTouches() {
-    return false;
-  }
-
-  @Override
   public void onCacheInitialized() {
     // Do nothing.
   }

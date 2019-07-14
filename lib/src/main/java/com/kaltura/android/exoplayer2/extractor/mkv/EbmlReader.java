@@ -20,20 +20,20 @@ import com.kaltura.android.exoplayer2.extractor.ExtractorInput;
 import java.io.IOException;
 
 /**
- * Event-driven EBML reader that delivers events to an {@link EbmlProcessor}.
- *
- * <p>EBML can be summarized as a binary XML format somewhat similar to Protocol Buffers. It was
- * originally designed for the Matroska container format. More information about EBML and Matroska
- * is available <a href="http://www.matroska.org/technical/specs/index.html">here</a>.
+ * Event-driven EBML reader that delivers events to an {@link EbmlReaderOutput}.
+ * <p>
+ * EBML can be summarized as a binary XML format somewhat similar to Protocol Buffers. It was
+ * originally designed for the Matroska container format. More information about EBML and
+ * Matroska is available <a href="http://www.matroska.org/technical/specs/index.html">here</a>.
  */
 /* package */ interface EbmlReader {
 
   /**
-   * Initializes the extractor with an {@link EbmlProcessor}.
+   * Initializes the extractor with an {@link EbmlReaderOutput}.
    *
-   * @param processor An {@link EbmlProcessor} to process events.
+   * @param output An {@link EbmlReaderOutput} to receive events.
    */
-  void init(EbmlProcessor processor);
+  void init(EbmlReaderOutput output);
 
   /**
    * Resets the state of the reader.

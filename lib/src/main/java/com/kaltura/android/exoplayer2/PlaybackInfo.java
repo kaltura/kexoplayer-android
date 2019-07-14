@@ -15,8 +15,8 @@
  */
 package com.kaltura.android.exoplayer2;
 
-import androidx.annotation.CheckResult;
-import androidx.annotation.Nullable;
+import android.support.annotation.CheckResult;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.source.MediaSource.MediaPeriodId;
 import com.kaltura.android.exoplayer2.source.TrackGroupArray;
 import com.kaltura.android.exoplayer2.trackselection.TrackSelectorResult;

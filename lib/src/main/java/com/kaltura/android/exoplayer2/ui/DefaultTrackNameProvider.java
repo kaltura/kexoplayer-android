@@ -41,17 +41,15 @@ public class DefaultTrackNameProvider implements TrackNameProvider {
     String trackName;
     int trackType = inferPrimaryTrackType(format);
     if (trackType == C.TRACK_TYPE_VIDEO) {
-      trackName =
-          joinWithSeparator(
-              buildRoleString(format), buildResolutionString(format), buildBitrateString(format));
+      trackName = joinWithSeparator(buildResolutionString(format), buildBitrateString(format));
     } else if (trackType == C.TRACK_TYPE_AUDIO) {
       trackName =
           joinWithSeparator(
-              buildLanguageOrLabelString(format),
+              buildLabelString(format),
               buildAudioChannelString(format),
               buildBitrateString(format));
     } else {
-      trackName = buildLanguageOrLabelString(format);
+      trackName = buildLabelString(format);
     }
     return trackName.length() == 0 ? resources.getString(R.string.exo_track_unknown) : trackName;
   }
@@ -91,41 +89,20 @@ public class DefaultTrackNameProvider implements TrackNameProvider {
     }
   }
 
-  private String buildLanguageOrLabelString(Format format) {
-    String languageAndRole =
-        joinWithSeparator(buildLanguageString(format), buildRoleString(format));
-    return TextUtils.isEmpty(languageAndRole) ? buildLabelString(format) : languageAndRole;
-  }
-
   private String buildLabelString(Format format) {
-    return TextUtils.isEmpty(format.label) ? "" : format.label;
-  }
-
-  private String buildLanguageString(Format format) {
+    if (!TextUtils.isEmpty(format.label)) {
+      return format.label;
+    }
+    // Fall back to using the language.
     String language = format.language;
-    if (TextUtils.isEmpty(language) || C.LANGUAGE_UNDETERMINED.equals(language)) {
-      return "";
-    }
-    Locale locale = Util.SDK_INT >= 21 ? Locale.forLanguageTag(language) : new Locale(language);
-    return locale.getDisplayName();
+    return TextUtils.isEmpty(language) || C.LANGUAGE_UNDETERMINED.equals(language)
+        ? ""
+        : buildLanguageString(language);
   }
 
-  private String buildRoleString(Format format) {
-    String roles = "";
-    if ((format.roleFlags & C.ROLE_FLAG_ALTERNATE) != 0) {
-      roles = resources.getString(R.string.exo_track_role_alternate);
-    }
-    if ((format.roleFlags & C.ROLE_FLAG_SUPPLEMENTARY) != 0) {
-      roles = joinWithSeparator(roles, resources.getString(R.string.exo_track_role_supplementary));
-    }
-    if ((format.roleFlags & C.ROLE_FLAG_COMMENTARY) != 0) {
-      roles = joinWithSeparator(roles, resources.getString(R.string.exo_track_role_commentary));
-    }
-    if ((format.roleFlags & (C.ROLE_FLAG_CAPTION | C.ROLE_FLAG_DESCRIBES_MUSIC_AND_SOUND)) != 0) {
-      roles =
-          joinWithSeparator(roles, resources.getString(R.string.exo_track_role_closed_captions));
-    }
-    return roles;
+  private String buildLanguageString(String language) {
+    Locale locale = Util.SDK_INT >= 21 ? Locale.forLanguageTag(language) : new Locale(language);
+    return locale.getDisplayLanguage();
   }
 
   private String joinWithSeparator(String... items) {

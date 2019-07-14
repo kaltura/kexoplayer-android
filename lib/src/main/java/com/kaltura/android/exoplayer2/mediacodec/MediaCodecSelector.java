@@ -16,8 +16,9 @@
 package com.kaltura.android.exoplayer2.mediacodec;
 
 import android.media.MediaCodec;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 import com.kaltura.android.exoplayer2.mediacodec.MediaCodecUtil.DecoderQueryException;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -32,11 +33,35 @@ public interface MediaCodecSelector {
   MediaCodecSelector DEFAULT =
       new MediaCodecSelector() {
         @Override
-        public List<MediaCodecInfo> getDecoderInfos(
-            String mimeType, boolean requiresSecureDecoder, boolean requiresTunnelingDecoder)
+        public List<MediaCodecInfo> getDecoderInfos(String mimeType, boolean requiresSecureDecoder)
             throws DecoderQueryException {
-          return MediaCodecUtil.getDecoderInfos(
-              mimeType, requiresSecureDecoder, requiresTunnelingDecoder);
+          List<MediaCodecInfo> decoderInfos =
+              MediaCodecUtil.getDecoderInfos(mimeType, requiresSecureDecoder);
+          return decoderInfos.isEmpty()
+              ? Collections.emptyList()
+              : Collections.singletonList(decoderInfos.get(0));
+        }
+
+        @Override
+        public @Nullable MediaCodecInfo getPassthroughDecoderInfo() throws DecoderQueryException {
+          return MediaCodecUtil.getPassthroughDecoderInfo();
+        }
+      };
+
+  /**
+   * A {@link MediaCodecSelector} that returns a list of decoders in priority order, allowing
+   * fallback to less preferred decoders if initialization fails.
+   *
+   * <p>Note: if a hardware-accelerated video decoder fails to initialize, this selector may provide
+   * a software video decoder to use as a fallback. Using software decoding can be inefficient, and
+   * the decoder may be too slow to keep up with the playback position.
+   */
+  MediaCodecSelector DEFAULT_WITH_FALLBACK =
+      new MediaCodecSelector() {
+        @Override
+        public List<MediaCodecInfo> getDecoderInfos(String mimeType, boolean requiresSecureDecoder)
+            throws DecoderQueryException {
+          return MediaCodecUtil.getDecoderInfos(mimeType, requiresSecureDecoder);
         }
 
         @Override
@@ -50,12 +75,10 @@ public interface MediaCodecSelector {
    *
    * @param mimeType The MIME type for which a decoder is required.
    * @param requiresSecureDecoder Whether a secure decoder is required.
-   * @param requiresTunnelingDecoder Whether a tunneling decoder is required.
    * @return A list of {@link MediaCodecInfo}s corresponding to decoders. May be empty.
    * @throws DecoderQueryException Thrown if there was an error querying decoders.
    */
-  List<MediaCodecInfo> getDecoderInfos(
-      String mimeType, boolean requiresSecureDecoder, boolean requiresTunnelingDecoder)
+  List<MediaCodecInfo> getDecoderInfos(String mimeType, boolean requiresSecureDecoder)
       throws DecoderQueryException;
 
   /**

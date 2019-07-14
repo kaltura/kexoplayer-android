@@ -18,7 +18,7 @@ package com.kaltura.android.exoplayer2.util;
 import android.os.Handler;
 import android.os.Handler.Callback;
 import android.os.Looper;
-import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 
 /**
  * The standard implementation of {@link Clock}.

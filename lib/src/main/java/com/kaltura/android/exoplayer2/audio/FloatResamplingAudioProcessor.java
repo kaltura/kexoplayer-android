@@ -16,30 +16,61 @@
 package com.kaltura.android.exoplayer2.audio;
 
 import com.kaltura.android.exoplayer2.C;
+import com.kaltura.android.exoplayer2.Format;
 import com.kaltura.android.exoplayer2.util.Util;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * An {@link AudioProcessor} that converts 24-bit and 32-bit integer PCM audio to 32-bit float PCM
  * audio.
  */
-/* package */ final class FloatResamplingAudioProcessor extends BaseAudioProcessor {
+/* package */ final class FloatResamplingAudioProcessor implements AudioProcessor {
 
   private static final int FLOAT_NAN_AS_INT = Float.floatToIntBits(Float.NaN);
   private static final double PCM_32_BIT_INT_TO_PCM_32_BIT_FLOAT_FACTOR = 1.0 / 0x7FFFFFFF;
 
+  private int sampleRateHz;
+  private int channelCount;
+  private @C.PcmEncoding int sourceEncoding;
+  private ByteBuffer buffer;
+  private ByteBuffer outputBuffer;
+  private boolean inputEnded;
+
+  /** Creates a new audio processor that converts audio data to {@link C#ENCODING_PCM_FLOAT}. */
+  public FloatResamplingAudioProcessor() {
+    sampleRateHz = Format.NO_VALUE;
+    channelCount = Format.NO_VALUE;
+    sourceEncoding = C.ENCODING_INVALID;
+    buffer = EMPTY_BUFFER;
+    outputBuffer = EMPTY_BUFFER;
+  }
+
   @Override
-  public boolean configure(int sampleRateHz, int channelCount, @C.PcmEncoding int encoding)
+  public boolean configure(int sampleRateHz, int channelCount, @C.Encoding int encoding)
       throws UnhandledFormatException {
     if (!Util.isEncodingHighResolutionIntegerPcm(encoding)) {
       throw new UnhandledFormatException(sampleRateHz, channelCount, encoding);
     }
-    return setInputFormat(sampleRateHz, channelCount, encoding);
+    if (this.sampleRateHz == sampleRateHz
+        && this.channelCount == channelCount
+        && sourceEncoding == encoding) {
+      return false;
+    }
+    this.sampleRateHz = sampleRateHz;
+    this.channelCount = channelCount;
+    sourceEncoding = encoding;
+    return true;
   }
 
   @Override
   public boolean isActive() {
-    return Util.isEncodingHighResolutionIntegerPcm(encoding);
+    return Util.isEncodingHighResolutionIntegerPcm(sourceEncoding);
+  }
+
+  @Override
+  public int getOutputChannelCount() {
+    return channelCount;
   }
 
   @Override
@@ -48,14 +79,23 @@ import java.nio.ByteBuffer;
   }
 
   @Override
+  public int getOutputSampleRateHz() {
+    return sampleRateHz;
+  }
+
+  @Override
   public void queueInput(ByteBuffer inputBuffer) {
-    boolean isInput32Bit = encoding == C.ENCODING_PCM_32BIT;
+    boolean isInput32Bit = sourceEncoding == C.ENCODING_PCM_32BIT;
     int position = inputBuffer.position();
     int limit = inputBuffer.limit();
     int size = limit - position;
 
     int resampledSize = isInput32Bit ? size : (size / 3) * 4;
-    ByteBuffer buffer = replaceOutputBuffer(resampledSize);
+    if (buffer.capacity() < resampledSize) {
+      buffer = ByteBuffer.allocateDirect(resampledSize).order(ByteOrder.nativeOrder());
+    } else {
+      buffer.clear();
+    }
     if (isInput32Bit) {
       for (int i = position; i < limit; i += 4) {
         int pcm32BitInteger =
@@ -77,6 +117,40 @@ import java.nio.ByteBuffer;
 
     inputBuffer.position(inputBuffer.limit());
     buffer.flip();
+    outputBuffer = buffer;
+  }
+
+  @Override
+  public void queueEndOfStream() {
+    inputEnded = true;
+  }
+
+  @Override
+  public ByteBuffer getOutput() {
+    ByteBuffer outputBuffer = this.outputBuffer;
+    this.outputBuffer = EMPTY_BUFFER;
+    return outputBuffer;
+  }
+
+  @SuppressWarnings("ReferenceEquality")
+  @Override
+  public boolean isEnded() {
+    return inputEnded && outputBuffer == EMPTY_BUFFER;
+  }
+
+  @Override
+  public void flush() {
+    outputBuffer = EMPTY_BUFFER;
+    inputEnded = false;
+  }
+
+  @Override
+  public void reset() {
+    flush();
+    sampleRateHz = Format.NO_VALUE;
+    channelCount = Format.NO_VALUE;
+    sourceEncoding = C.ENCODING_INVALID;
+    buffer = EMPTY_BUFFER;
   }
 
   /**

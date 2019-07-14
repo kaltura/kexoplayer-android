@@ -15,7 +15,7 @@
  */
 package com.kaltura.android.exoplayer2.upstream;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 import com.kaltura.android.exoplayer2.C;
 import com.kaltura.android.exoplayer2.util.Assertions;
 import java.io.IOException;
