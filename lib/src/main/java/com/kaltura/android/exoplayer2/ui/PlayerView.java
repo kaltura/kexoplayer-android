@@ -1052,6 +1052,9 @@ public class PlayerView extends FrameLayout implements AdsLoader.AdViewProvider 
 
   @Override
   public boolean onTouchEvent(MotionEvent event) {
+    if (!useController || player == null) {
+      return false;
+    }
     switch (event.getAction()) {
       case MotionEvent.ACTION_DOWN:
         isTouching = true;
@@ -1152,9 +1155,6 @@ public class PlayerView extends FrameLayout implements AdsLoader.AdViewProvider 
   // Internal methods.
 
   private boolean toggleControllerVisibility() {
-    if (!useController || player == null) {
-      return false;
-    }
     if (!controller.isVisible()) {
       maybeShowController(true);
     } else if (controllerHideOnTouch) {
@@ -1474,6 +1474,9 @@ public class PlayerView extends FrameLayout implements AdsLoader.AdViewProvider 
 
     @Override
     public boolean onSingleTapUp(MotionEvent e) {
+      if (!useController || player == null) {
+        return false;
+      }
       return toggleControllerVisibility();
     }
   }

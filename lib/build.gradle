@@ -36,6 +36,8 @@ tasks.withType(Javadoc) {
 dependencies {
     implementation 'org.jetbrains:annotations:15.0'
     
+    api "com.squareup.okhttp3:okhttp:3.12.1"
+
     implementation 'androidx.annotation:annotation:1.0.2'
     implementation 'androidx.media:media:1.0.1'
     implementation 'androidx.core:core:1.0.2'
