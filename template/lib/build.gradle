@@ -45,4 +45,5 @@ dependencies {
     compileOnly 'com.google.code.findbugs:jsr305:' + jsr305Version
     compileOnly 'org.checkerframework:checker-qual:' + checkerframeworkVersion
     compileOnly 'org.checkerframework:checker-compat-qual:' + checkerframeworkVersion
+    compileOnly 'org.jetbrains.kotlin:kotlin-annotations-jvm:' + kotlinAnnotationsVersion
 }
