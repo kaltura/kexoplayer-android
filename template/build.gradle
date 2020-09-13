@@ -11,7 +11,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:4.0.0'
-        classpath 'com.novoda:bintray-release:0.9'
+        classpath 'com.novoda:bintray-release:0.9.1'
         classpath 'com.google.android.gms:strict-version-matcher-plugin:1.2.1'
     }
 }
