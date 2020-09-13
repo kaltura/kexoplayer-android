@@ -16,6 +16,13 @@ mkdir -p "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android"
 # Core
 cp -R "$INPUT_DIR/library/core/src/main/java/com/google/android/exoplayer2" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android"
 
+# Core
+cp -R "$INPUT_DIR/library/common/src/main/java/com/google/android/exoplayer2" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2"
+
+
+# Core
+cp -R "$INPUT_DIR/library/extractor/src/main/java/com/google/android/exoplayer2" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2/extractor"
+
 # DASH and HLS sources
 for LIB in dash hls; do
   cp -R "$INPUT_DIR/library/$LIB/src/main/java/com/google/android/exoplayer2/source/$LIB" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2/source/$LIB"

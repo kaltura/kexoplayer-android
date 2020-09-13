@@ -36,14 +36,20 @@ tasks.withType(Javadoc) {
 dependencies {
     implementation 'org.jetbrains:annotations:15.0'
     
-    api "com.squareup.okhttp3:okhttp:3.12.1"
-
-    implementation 'androidx.annotation:annotation:1.0.2'
-    implementation 'androidx.media:media:1.0.1'
-    implementation 'androidx.core:core:1.0.2'
-
+    api "com.squareup.okhttp3:okhttp:3.12.11"
+    implementation 'androidx.recyclerview:recyclerview:' + androidxRecyclerViewVersion
+    implementation 'androidx.media:media:1.1.0'
+    implementation 'androidx.core:core:1.1.0'
+    implementation 'androidx.annotation:annotation:' + androidxAnnotationVersion
+    implementation ('com.google.guava:guava:' + guavaVersion) {
+        exclude group: 'com.google.code.findbugs', module: 'jsr305'
+        exclude group: 'org.checkerframework', module: 'checker-compat-qual'
+        exclude group: 'com.google.errorprone', module: 'error_prone_annotations'
+        exclude group: 'com.google.j2objc', module: 'j2objc-annotations'
+        exclude group: 'org.codehaus.mojo', module: 'animal-sniffer-annotations'
+    }
     compileOnly 'com.google.code.findbugs:jsr305:' + jsr305Version
     compileOnly 'org.checkerframework:checker-qual:' + checkerframeworkVersion
-    compileOnly 'org.checkerframework:checker-compat-qual:' + checkerframeworkVersion
+    compileOnly 'org.checkerframework:checker-compat-qual:' + checkerframeworkCompatVersion 
     compileOnly 'org.jetbrains.kotlin:kotlin-annotations-jvm:' + kotlinAnnotationsVersion
 }
