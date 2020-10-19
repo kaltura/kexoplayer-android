@@ -12,7 +12,7 @@ mkdir "$WORK_DIR"
 cd "$WORK_DIR"
 
 ## Step 1: Download ExoPlayer
-curl -L https://github.com/giladna/ExoPlayer/archive/v2.12.0.1.zip | tar -xz
+curl -L https://github.com/giladna/ExoPlayer/archive/v2.12.0.2.zip | tar -xz
 
 ## Step 2: Prepare the sources
 $MYDIR/prepare.sh "ExoPlayer-$VERSION" dist
