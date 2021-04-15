@@ -18,8 +18,5 @@ curl -L https://github.com/google/ExoPlayer/archive/r$VERSION.tar.gz | tar -xz
 $MYDIR/prepare.sh "ExoPlayer-r$VERSION" dist
 	
 ## Step 3: Build
-cd dist
-./gradlew publishReleasePublicationToMavenLocal
-
 ## Step 4: Push to Maven Central
 ./gradlew build uploadArchives
