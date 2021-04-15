@@ -21,6 +21,5 @@ $MYDIR/prepare.sh "ExoPlayer-r$VERSION" dist
 cd dist
 ./gradlew publishReleasePublicationToMavenLocal
 
-## Step 4: Push to Bintray
-./gradlew bintrayUpload -PbintrayUser=$BINTRAY_USER -PbintrayKey=$BINTRAY_KEY -PdryRun=false
-	
+## Step 4: Push to Maven Central
+./gradlew build uploadArchives
