@@ -1,5 +1,4 @@
 apply plugin: 'com.android.library'
-apply from: 'version.gradle'
 apply from: 'constants.gradle'
 
 android {
@@ -36,12 +35,16 @@ tasks.withType(Javadoc) {
 dependencies {
     implementation 'org.jetbrains:annotations:15.0'
     
-    api "com.squareup.okhttp3:okhttp:3.12.1"
+    api "com.squareup.okhttp3:okhttp:3.12.11"
 
-    implementation 'androidx.annotation:annotation:1.0.2'
-    implementation 'androidx.media:media:1.0.1'
+    implementation 'androidx.annotation:annotation:1.1.0'
+    implementation 'androidx.media:media:1.2.1'
     implementation 'androidx.core:core:1.0.2'
 
     compileOnly 'org.checkerframework:checker-qual:' + checkerframeworkVersion
     compileOnly 'org.checkerframework:checker-compat-qual:' + checkerframeworkVersion
+}
+
+if (hasProperty('VERSION_NAME')) {
+    apply from: './gradle-mvn-push.gradle'
 }
