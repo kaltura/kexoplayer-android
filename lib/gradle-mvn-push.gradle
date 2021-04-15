@@ -1,5 +1,7 @@
 apply plugin: 'maven'
 apply plugin: 'signing'
+apply from: 'constants.gradle'
+
 
 def isReleaseBuild() {
     return VERSION_NAME.contains("dev") == false
