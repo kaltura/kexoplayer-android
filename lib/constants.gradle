@@ -17,12 +17,12 @@ project.ext {
     releaseVersionCode = 2010003
     minSdkVersion = 16
     targetSdkVersion = 28
-    compileSdkVersion = 28
+    compileSdkVersion = 30
     dexmakerVersion = '2.21.0'
-    mockitoVersion = '2.25.0'
-    robolectricVersion = '4.2'
+    mockitoVersion = '2.28.2'
+    robolectricVersion = '4.5'
     autoValueVersion = '1.6'
-    checkerframeworkVersion = '2.5.0'
+    checkerframeworkVersion = '3.3.0'
     androidXTestVersion = '1.1.0'
     modulePrefix = ':'
     if (gradle.ext.has('exoplayerModulePrefix')) {
