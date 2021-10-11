@@ -50,5 +50,17 @@ find . -type f -name "*.xml"  -exec perl -i -p -e 's/\@\+id\/exo_/\@\+id\/kexo_/
 find . -type f -name "ids.xml"  -exec perl -i -p -e 's/name\=\"exo\_/name\=\"kexo\_/' {} \;
 find . -type f -name "*.java"  -exec perl -i -p -e 's/R\.id\.exo_/R\.id\.kexo_/' {} \;
 
+# Rename layout exo->kexo
+find . -type f -name "*.java"  -exec perl -i -p -e 's/R\.layout\.exo_/R\.layout\.kexo_/' {} \;
+
+#Rename LayoutFiles exo -> kexo
+LAYOUT_XMLS=`find . -name "exo*.xml" | grep layout`
+for XML_LAYOUT_FILE in $LAYOUT_XMLS
+do
+    NEW_XML_LAYOUT_FILE=`echo $XML_LAYOUT_FILE | sed -e "s/exo_/kexo_/"`
+    mv $XML_LAYOUT_FILE $NEW_XML_LAYOUT_FILE
+done
+
+
 # Constants file
 cp "$INPUT_DIR/constants.gradle" "$OUTPUT_DIR/lib"
