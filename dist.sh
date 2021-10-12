@@ -1,6 +1,6 @@
 #!/bin/bash -exu
 
-VERSION="$1"
+VERSION="2.15.1"
 
 # Make sure BINTRAY_USER and BINTRAY_KEY are exported
 
@@ -15,9 +15,9 @@ cd "$WORK_DIR"
 curl -L https://github.com/google/ExoPlayer/archive/r$VERSION.tar.gz | tar -xz
 
 ## Step 2: Prepare the sources
-$MYDIR/prepare.sh "ExoPlayer-r$VERSION" dist
+$MYDIR/prepare.sh "ExoPlayer-r2.15.100" dist
 	
 ## Step 3: Build
 ## Step 4: Push to Maven Central
 cd dist
-#./gradlew build uploadArchives
+./gradlew build uploadArchives
