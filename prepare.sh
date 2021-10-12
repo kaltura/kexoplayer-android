@@ -47,6 +47,7 @@ find "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2/ui" -type f -
 # Rename ids exo->kexo
 find . -type f -name "*.xml"  -exec perl -i -p -e 's/\@id\/exo_/\@id\/kexo_/' {} \;
 find . -type f -name "*.xml"  -exec perl -i -p -e 's/\@\+id\/exo_/\@\+id\/kexo_/' {} \;
+find . -type f -name "*.xml"  -exec perl -i -p -e 's/\@layout\/exo_/\@layout\/kexo_/' {} \;
 find . -type f -name "ids.xml"  -exec perl -i -p -e 's/name\=\"exo\_/name\=\"kexo\_/' {} \;
 find . -type f -name "*.java"  -exec perl -i -p -e 's/R\.id\.exo_/R\.id\.kexo_/' {} \;
 
