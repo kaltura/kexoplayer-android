@@ -15,7 +15,7 @@ cd "$WORK_DIR"
 curl -L https://github.com/google/ExoPlayer/archive/r$VERSION.tar.gz | tar -xz
 
 ## Step 2: Prepare the sources
-$MYDIR/prepare.sh "ExoPlayer-r2.15.100" dist
+$MYDIR/prepare.sh "ExoPlayer-r2.15.1" dist
 	
 ## Step 3: Build
 ## Step 4: Push to Maven Central
