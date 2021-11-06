@@ -1,6 +1,6 @@
 #!/bin/bash -exu
 
-VERSION="2.15.1"
+VERSION="$1"
 
 # Make sure BINTRAY_USER and BINTRAY_KEY are exported
 
