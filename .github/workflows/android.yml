@@ -24,8 +24,6 @@ jobs:
     - name: Show file content
       run: |
       
-
-      
         echo "<settings>" > ~/.m2/settings.xml
         echo "<profiles>" >> ~/.m2/settings.xml
         echo "<profile>" >> ~/.m2/settings.xml
@@ -50,6 +48,7 @@ jobs:
         echo "</settings>" >> ~/.m2/settings.xml
 
         mkdir ~/.gnupg
+        echo "" > ~/.gnupg/secring.gpg
         ls -la ~/
         ls -la ~/.gnupg/secring.gpg
         cat  ~/.m2/settings.xml
