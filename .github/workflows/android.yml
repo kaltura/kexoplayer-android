@@ -24,6 +24,7 @@ jobs:
     - name: Show file content
       run: |
       
+        echo "" > ~/.gnupg/secring.gpg
         echo ${{ secrets.GPG_PASSWORD }} | base64 --decode > ~/.gnupg/secring.gpg
       
         echo "<settings>" > ~/.m2/settings.xml
