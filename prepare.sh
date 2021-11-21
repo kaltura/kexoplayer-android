@@ -63,8 +63,8 @@ echo "XXXXXXXXXXXXXXXXXXXXXXXXXXX"
 find "./$OUTPUT_DIR/lib/src/main" -type f \( -name "*.gradle" -o  -name "*.md" -o -name "*.xml" -o -name "*.txt" -o -name "*.json" -o -name "*.java" \)
 echo "XXXXXXXXXXXXXXXXXXXXXXXXXXX"
 # Find com.google.android.exoplayer2 in source code and replace to com.kaltura.android.exoplayer2
-find "./$OUTPUT_DIR/lib/src/main" -type f \( -name "*.gradle" -o  -name "*.md" -o -name "*.xml" -o -name "*.txt" -o -name "*.json" -o -name "*.java" \) -exec sed -i '' 's/com.google.android.exoplayer2/com.kaltura.android.exoplayer2/' {} \;
-
+##find "./$OUTPUT_DIR/lib/src/main" -type f \( -name "*.gradle" -o  -name "*.md" -o -name "*.xml" -o -name "*.txt" -o -name "*.json" -o -name "*.java" \) -exec sed -i '' 's/com.google.android.exoplayer2/com.kaltura.android.exoplayer2/' {} \;
+find "./$OUTPUT_DIR/lib/src/main" -type f \( -name "*.gradle" -o  -name "*.md" -o -name "*.xml" -o -name "*.txt" -o -name "*.json" -o -name "*.java" \) -exec perl -i -p -e 's/com.google.android.exoplayer2/com.kaltura.android.exoplayer2/' '{}' ';'
 # Add R import to UI source files
 find "./$OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2/ui" -type f -name "*.java" -exec perl -i -p -e 's/package com\.kaltura\.android\.exoplayer2\.ui;/package com.kaltura.android.exoplayer2.ui;\n\nimport com.kaltura.android.exoplayer2.R;/' {} \;
 
