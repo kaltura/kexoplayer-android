@@ -21,9 +21,6 @@ jobs:
         distribution: 'adopt'
         cache: gradle
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-
     - name: Build dist
       env:
         VERSION: ${{ github.event.inputs.exoplayer_version }}
