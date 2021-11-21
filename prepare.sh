@@ -16,9 +16,8 @@ mkdir -p "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android"
 # Core
 cp -R "$INPUT_DIR/library/core/src/main/java/com/google/android/exoplayer2" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android"
 
-# Core
-cp -R "$INPUT_DIR/library/common/src/main/java/com/google/android/exoplayer2" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2"
-
+# Common
+cp -R "$INPUT_DIR/library/common/src/main/java/com/google/android/exoplayer2" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android"
 
 # Core
 cp -R "$INPUT_DIR/library/extractor/src/main/java/com/google/android/exoplayer2" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2/extractor"
@@ -31,8 +30,31 @@ done
 # UI Java files
 cp -R "$INPUT_DIR/library/ui/src/main/java/com/google/android/exoplayer2/ui" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2"
 
+# DATASOURCE Java files
+cp -R "$INPUT_DIR/library/datasource/src/main/java/com/google/android/exoplayer2" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android"
+
+# DECODER Java files
+cp -R "$INPUT_DIR/library/decoder/src/main/java/com/google/android/exoplayer2" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android"
+
+# DATABASE Java files
+cp -R "$INPUT_DIR/library/database/src/main/java/com/google/android/exoplayer2" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android"
+
+sed '/core.R;$/d' $OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2/ui/DownloadNotificationHelper.java > /tmp/DownloadNotificationHelper.java
+mv /tmp/DownloadNotificationHelper.java $OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2/ui/DownloadNotificationHelper.java
+
 # UI res files
 cp -R "$INPUT_DIR/library/ui/src/main/res" "$OUTPUT_DIR/lib/src/main"
+
+cp $INPUT_DIR/library/core/src/main/res/values/strings.xml /tmp/kexo_core_strings.xml
+
+perl -i -pe's/\<string/\<string translatable\=\"false\"/g' /tmp/kexo_core_strings.xml
+ 
+cat $INPUT_DIR/library/ui/src/main/res/values/strings.xml  | grep -v "/resources" > /tmp/kexo_strings.xml
+
+cat /tmp/kexo_core_strings.xml | grep "name=" >> /tmp/kexo_strings.xml
+echo "</resources>" >> /tmp/kexo_strings.xml
+rm /tmp/kexo_core_strings.xml
+mv /tmp/kexo_strings.xml $OUTPUT_DIR/lib/src/main/res/values/strings.xml
 
 # OkHttp extension
 mkdir "$OUTPUT_DIR/lib/src/main/java/com/kaltura/android/exoplayer2/ext"

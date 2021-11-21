@@ -20,4 +20,5 @@ $MYDIR/prepare.sh "ExoPlayer-r$VERSION" dist
 ## Step 3: Build
 ## Step 4: Push to Maven Central
 cd dist
-./gradlew build uploadArchives
+./gradlew --no-daemon build uploadArchives
+#./gradlew build uploadArchives

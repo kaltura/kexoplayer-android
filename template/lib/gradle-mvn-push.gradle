@@ -1,5 +1,5 @@
 apply from: 'constants.gradle'
-apply plugin: 'maven'
+apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
 def isReleaseBuild() {
