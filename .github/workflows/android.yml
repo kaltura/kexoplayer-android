@@ -24,7 +24,6 @@ jobs:
     - name: Show file content
       run: |
       
-        mkdir -p ~/.gnupg
         echo ${{ secrets.GPG_PASSWORD }} | base64 --decode > ~/.gnupg/secring.gpg
       
         echo "<settings>" > ~/.m2/settings.xml
