@@ -1,0 +1,35 @@
+name: Android CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      exoplayer_version:
+        default: 2.11.x
+        required: true
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: set up JDK 11
+      uses: actions/setup-java@v2
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build dist
+      env:
+        VERSION: ${{ github.event.inputs.exoplayer_version }}
+        NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+        NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+        MAVEN_KEYID: ${{ secrets.MAVEN_KEYID }}
+        MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+        MAVEN_SECRING_PATH: ${{ secrets.MAVEN_SECRING_PATH }}
+      run: ./dist.sh $VERSION
