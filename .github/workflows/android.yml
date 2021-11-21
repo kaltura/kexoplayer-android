@@ -21,6 +21,11 @@ jobs:
         distribution: 'adopt'
         cache: gradle
 
+    - name: Show file content
+      run: |
+        ls -la ~/
+        cat  ~/.m2/settings.xml
+        
     - name: Build dist
       env:
         VERSION: ${{ github.event.inputs.exoplayer_version }}
