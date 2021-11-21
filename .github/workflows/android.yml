@@ -35,7 +35,7 @@ jobs:
         echo "<id>gpg</id>" >> ~/.m2/settings.xml
         echo "<properties>" >> ~/.m2/settings.xml
         echo "<gpg.executable>gpg</gpg.executable>" >> ~/.m2/settings.xml
-        echo "<gpg.passphrase>$GPG_PASSWORD</gpg.passphrase>" >> ~/.m2/settings.xml
+        echo "<gpg.passphrase>"$GPG_PASSWORD"</gpg.passphrase>" >> ~/.m2/settings.xml
         echo "</properties>" >> ~/.m2/settings.xml
         echo "</profile>" >> ~/.m2/settings.xml
         echo "</profiles>" >> ~/.m2/settings.xml
@@ -45,8 +45,8 @@ jobs:
         echo "<servers>" >> ~/.m2/settings.xml
         echo "<server>" >> ~/.m2/settings.xml
         echo "<id>ossrh</id>" >> ~/.m2/settings.xml
-        echo "<username>$NEXUS_USERNAME</username>" >> ~/.m2/settings.xml
-        echo "<password>$NEXUS_PASSWORD</password>" >> ~/.m2/settings.xml
+        echo "<username>"$NEXUS_USERNAME"</username>" >> ~/.m2/settings.xml
+        echo "<password>"$NEXUS_PASSWORD"</password>" >> ~/.m2/settings.xml
         echo "</server>" >> ~/.m2/settings.xml
         echo "</servers>" >> ~/.m2/settings.xml
         echo "<localRepository>/tmp/mvn</localRepository>" >> ~/.m2/settings.xml
