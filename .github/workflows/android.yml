@@ -49,7 +49,7 @@ jobs:
         echo "<localRepository>/tmp/mvn</localRepository>" >> ~/.m2/settings.xml
         echo "</settings>" >> ~/.m2/settings.xml
 
-
+        mkdir ~/.gnupg
         ls -la ~/
         ls -la ~/.gnupg/secring.gpg
         cat  ~/.m2/settings.xml
