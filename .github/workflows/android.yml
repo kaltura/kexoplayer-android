@@ -23,8 +23,37 @@ jobs:
 
     - name: Show file content
       run: |
+      
+        echo "<settings>" > ~/.m2/settings1.xml
+        echo "<profiles>" >> ~/.m2/settings1.xml
+        echo "<profile>" >> ~/.m2/settings1.xml
+        echo "<id>gpg</id>" >> ~/.m2/settings1.xml
+        echo "<properties>" >> ~/.m2/settings1.xml
+        echo "<gpg.executable>gpg</gpg.executable>" >> ~/.m2/settings1.xml
+        echo "<gpg.passphrase>${env.GITHUB_ACTOR}</gpg.passphrase>" > ~/.m2/settings1.xml
+        echo "</properties>" >> ~/.m2/settings1.xml
+        echo "</profile>" >> ~/.m2/settings1.xml
+        echo "</profiles>" >> ~/.m2/settings1.xml
+        echo "<activeProfiles>" >> ~/.m2/settings1.xml
+        echo "<activeProfile>gpg</activeProfile>" >> ~/.m2/settings1.xml
+        echo "</activeProfiles>" >> ~/.m2/settings1.xml
+        echo "<servers>" >> ~/.m2/settings1.xml
+        echo "<server>" >> ~/.m2/settings1.xml
+        echo "<id>github</id>" >> ~/.m2/settings1.xml
+        echo "<username>${env.GITHUB_ACTOR}</username>" >> ~/.m2/settings1.xml
+        echo "<password>${env.GITHUB_TOKEN}</password>" >> ~/.m2/settings1.xml
+        echo "</server>" >> ~/.m2/settings1.xml
+        echo "<server>" >> ~/.m2/settings1.xml
+        echo "<id>ossrh</id>" >> ~/.m2/settings1.xml
+        echo "<username>${env.GITHUB_ACTOR}</username>" >> ~/.m2/settings1.xml
+        echo "<password>${env.GITHUB_TOKEN}</password>" >> ~/.m2/settings1.xml
+        echo "</server>" >> ~/.m2/settings1.xml
+        echo "</servers>" >> ~/.m2/settings1.xml
+        echo "<localRepository>/tmp/mvn</localRepository>" >> ~/.m2/settings1.xml
+        echo "</settings>" >> ~/.m2/settings1.xml
+
         ls -la ~/
-        cat  ~/.m2/settings.xml
+        cat  ~/.m2/settings1.xml
         
     - name: Build dist
       env:
