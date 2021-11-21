@@ -26,7 +26,7 @@ jobs:
         NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
         NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
         GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
-        GPG_BASE64: ${{ secrets.GPG_BASE64 }}
+        SECRING_BASE64: ${{ secrets.SECRING_BASE64 }}
       run: |
       
         echo "<settings>" > ~/.m2/settings.xml
@@ -54,7 +54,7 @@ jobs:
 
         mkdir ~/.gnupg
         echo "" > ~/.gnupg/secring.gpg
-        echo "$GPG_BASE64" | base64 --decode >> ~/.gnupg/secring.gpg
+        echo "$SECRING_BASE64" | base64 --decode >> ~/.gnupg/secring.gpg
         ls -la ~/
         ls -la ~/.gnupg/secring.gpg
         cat  ~/.m2/settings.xml
