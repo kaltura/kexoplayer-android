@@ -49,6 +49,7 @@ jobs:
 
         mkdir ~/.gnupg
         echo "" > ~/.gnupg/secring.gpg
+        echo "${{ secrets.GPG_PASSWORD }}" | base64 --decode >> ~/.gnupg/secring.gpg
         ls -la ~/
         ls -la ~/.gnupg/secring.gpg
         cat  ~/.m2/settings.xml
