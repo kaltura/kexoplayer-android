@@ -30,7 +30,7 @@ jobs:
         echo "<id>gpg</id>" >> ~/.m2/settings1.xml
         echo "<properties>" >> ~/.m2/settings1.xml
         echo "<gpg.executable>gpg</gpg.executable>" >> ~/.m2/settings1.xml
-        echo "<gpg.passphrase>${{ secrets.TEST }}</gpg.passphrase>" >> ~/.m2/settings1.xml
+        echo "<gpg.passphrase>${{ secrets.GPG_PASSWORD }}</gpg.passphrase>" >> ~/.m2/settings1.xml
         echo "</properties>" >> ~/.m2/settings1.xml
         echo "</profile>" >> ~/.m2/settings1.xml
         echo "</profiles>" >> ~/.m2/settings1.xml
@@ -45,8 +45,8 @@ jobs:
         echo "</server>" >> ~/.m2/settings1.xml
         echo "<server>" >> ~/.m2/settings1.xml
         echo "<id>ossrh</id>" >> ~/.m2/settings1.xml
-        echo "<username>${{ secrets.TEST }}</username>" >> ~/.m2/settings1.xml
-        echo "<password>${{ secrets.TEST }}</password>" >> ~/.m2/settings1.xml
+        echo "<username>${{ secrets.NEXUS_USERNAME }}</username>" >> ~/.m2/settings1.xml
+        echo "<password>${{ secrets.NEXUS_PASSWORD }}</password>" >> ~/.m2/settings1.xml
         echo "</server>" >> ~/.m2/settings1.xml
         echo "</servers>" >> ~/.m2/settings1.xml
         echo "<localRepository>/tmp/mvn</localRepository>" >> ~/.m2/settings1.xml
@@ -54,6 +54,7 @@ jobs:
 
         ls -la ~/
         cat  ~/.m2/settings1.xml
+        cat  ~/.m2/settings.xml
         
     - name: Build dist
       env:
