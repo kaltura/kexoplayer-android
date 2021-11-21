@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       exoplayer_version:
-        default: 2.11.x
+        default: 2.16.x
         required: true
 
 jobs:
