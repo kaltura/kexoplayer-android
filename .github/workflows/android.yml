@@ -22,6 +22,11 @@ jobs:
         cache: gradle
 
     - name: Show file content
+      env:
+        NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+        NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+        GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
+        GPG_BASE64: ${{ secrets.GPG_BASE64 }}
       run: |
       
         echo "<settings>" > ~/.m2/settings.xml
@@ -30,7 +35,7 @@ jobs:
         echo "<id>gpg</id>" >> ~/.m2/settings.xml
         echo "<properties>" >> ~/.m2/settings.xml
         echo "<gpg.executable>gpg</gpg.executable>" >> ~/.m2/settings.xml
-        echo "<gpg.passphrase>${{ secrets.GPG_PASSWORD }}</gpg.passphrase>" >> ~/.m2/settings.xml
+        echo "<gpg.passphrase>$GPG_PASSWORD</gpg.passphrase>" >> ~/.m2/settings.xml
         echo "</properties>" >> ~/.m2/settings.xml
         echo "</profile>" >> ~/.m2/settings.xml
         echo "</profiles>" >> ~/.m2/settings.xml
@@ -40,8 +45,8 @@ jobs:
         echo "<servers>" >> ~/.m2/settings.xml
         echo "<server>" >> ~/.m2/settings.xml
         echo "<id>ossrh</id>" >> ~/.m2/settings.xml
-        echo "<username>${{ secrets.NEXUS_USERNAME }}</username>" >> ~/.m2/settings.xml
-        echo "<password>${{ secrets.NEXUS_PASSWORD }}</password>" >> ~/.m2/settings.xml
+        echo "<username>$NEXUS_USERNAME</username>" >> ~/.m2/settings.xml
+        echo "<password>$NEXUS_PASSWORD</password>" >> ~/.m2/settings.xml
         echo "</server>" >> ~/.m2/settings.xml
         echo "</servers>" >> ~/.m2/settings.xml
         echo "<localRepository>/tmp/mvn</localRepository>" >> ~/.m2/settings.xml
@@ -49,7 +54,7 @@ jobs:
 
         mkdir ~/.gnupg
         echo "" > ~/.gnupg/secring.gpg
-        echo "${{ secrets.GPG_PASSWORD }}" | base64 --decode >> ~/.gnupg/secring.gpg
+        echo "$GPG_BASE64" | base64 --decode >> ~/.gnupg/secring.gpg
         ls -la ~/
         ls -la ~/.gnupg/secring.gpg
         cat  ~/.m2/settings.xml
