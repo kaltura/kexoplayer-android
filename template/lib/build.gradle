@@ -29,9 +29,9 @@ android {
     }
 }
 
-//tasks.withType(Javadoc) {
-//    options.addBooleanOption('Xdoclint:none', true)
-//}
+tasks.withType(Javadoc) {
+    options.addBooleanOption('Xdoclint:none', true)
+}
 
 dependencies {
     implementation 'org.jetbrains:annotations:15.0'
