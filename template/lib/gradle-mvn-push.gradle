@@ -24,49 +24,49 @@ def getRepositoryPassword() {
     return System.getenv("NEXUS_PASSWORD")
 }
 
+
 afterEvaluate { project ->
-    uploadArchives {
-        repositories {
-            mavenDeployer {
-                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
 
-                pom.groupId = GROUP
-                pom.artifactId = POM_ARTIFACT_ID
-                VERSION_NAME = releaseVersion
-                pom.version = VERSION_NAME
+                groupId = GROUP
+                artifactId = POM_ARTIFACT_ID
 
-                repository(url: getReleaseRepositoryUrl()) {
-                    authentication(userName: getRepositoryUsername(), password: getRepositoryPassword())
-                }
-                snapshotRepository(url: getSnapshotRepositoryUrl()) {
-                    authentication(userName: getRepositoryUsername(), password: getRepositoryPassword())
-                }
+                VERSION_NAME = playkitVersion
+                version = VERSION_NAME
 
-                pom.project {
-                    name POM_NAME
-                    packaging POM_PACKAGING
-                    description POM_DESCRIPTION
-                    url POM_URL
-
-                    scm {
-                        url POM_SCM_URL
-                        connection POM_SCM_CONNECTION
-                        developerConnection POM_SCM_DEV_CONNECTION
+                repositories {
+                    maven {
+                        def releasesRepoUrl = getReleaseRepositoryUrl()
+                        def snapshotsRepoUrl = getSnapshotRepositoryUrl()
+                        url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
                     }
+                }
+
+                pom {
+                    name = POM_NAME
+                    packaging = POM_PACKAGING
+                    description = POM_DESCRIPTION
+                    url = POM_URL
 
                     licenses {
                         license {
-                            name POM_LICENCE_NAME
-                            url POM_LICENCE_URL
-                            distribution POM_LICENCE_DIST
+                            name = POM_LICENCE_NAME
+                            url = POM_LICENCE_URL
+                            distribution = POM_LICENCE_DIST
                         }
                     }
-
                     developers {
                         developer {
-                            id POM_DEVELOPER_ID
-                            name POM_DEVELOPER_NAME
+                            id = POM_DEVELOPER_ID
+                            name = POM_DEVELOPER_NAME
                         }
+                    }
+                    scm {
+                        url = POM_SCM_URL
+                        connection = POM_SCM_CONNECTION
+                        developerConnection = POM_SCM_DEV_CONNECTION
                     }
                 }
             }
