@@ -40,6 +40,10 @@ afterEvaluate { project ->
                         def releasesRepoUrl = getReleaseRepositoryUrl()
                         def snapshotsRepoUrl = getSnapshotRepositoryUrl()
                         url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                        credentials {
+                            username getRepositoryUsername()
+                            password getRepositoryPassword()
+                        }                                                       
                     }
                 }
 
