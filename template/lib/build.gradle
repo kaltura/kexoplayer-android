@@ -57,4 +57,6 @@ dependencies {
 
 if (hasProperty('VERSION_NAME')) {
     apply from: './gradle-mvn-push.gradle'
-}
+} else {
+    apply from: './gradle-mvn-local.gradle'
+} 
