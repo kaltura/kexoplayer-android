@@ -3,10 +3,3 @@ apply from: 'constants.gradle'
 // Library Version
 ext.releaseVersion = 'dev'
 
-// Append short commit hash to dev builds, i.e. "dev.a1b2c3d"
-if (libVersion == 'dev') {
-    def cmd = "git -C " + projectDir + " rev-parse --short HEAD"
-    def proc = cmd.execute()
-    def commit = proc.text.trim()
-    ext.libVersion = 'dev.' + commit
-}

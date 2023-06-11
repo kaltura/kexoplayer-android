@@ -21,47 +21,6 @@ jobs:
         distribution: 'adopt'
         cache: gradle
 
-    - name: Maven preprocess
-      shell: bash
-      env:
-        NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
-        NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
-        GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
-        SECRING_BASE64: ${{ secrets.SECRING_BASE64 }}
-        SIGNING_KEYID: ${{ secrets.SIGNING_KEY_ID }}
-        SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-      run: |
-      
-        echo "<settings>" > ~/.m2/settings.xml
-        echo "<profiles>" >> ~/.m2/settings.xml
-        echo "<profile>" >> ~/.m2/settings.xml
-        echo "<id>gpg</id>" >> ~/.m2/settings.xml
-        echo "<properties>" >> ~/.m2/settings.xml
-        echo "<gpg.executable>gpg</gpg.executable>" >> ~/.m2/settings.xml
-        echo "<gpg.passphrase>"$GPG_PASSWORD"</gpg.passphrase>" >> ~/.m2/settings.xml
-        echo "</properties>" >> ~/.m2/settings.xml
-        echo "</profile>" >> ~/.m2/settings.xml
-        echo "</profiles>" >> ~/.m2/settings.xml
-        echo "<activeProfiles>" >> ~/.m2/settings.xml
-        echo "<activeProfile>gpg</activeProfile>" >> ~/.m2/settings.xml
-        echo "</activeProfiles>" >> ~/.m2/settings.xml
-        echo "<servers>" >> ~/.m2/settings.xml
-        echo "<server>" >> ~/.m2/settings.xml
-        echo "<id>ossrh</id>" >> ~/.m2/settings.xml
-        echo "<username>"$NEXUS_USERNAME"</username>" >> ~/.m2/settings.xml
-        echo "<password>"$NEXUS_PASSWORD"</password>" >> ~/.m2/settings.xml
-        echo "</server>" >> ~/.m2/settings.xml
-        echo "</servers>" >> ~/.m2/settings.xml
-        echo "<localRepository>/tmp/mvn</localRepository>" >> ~/.m2/settings.xml
-        echo "</settings>" >> ~/.m2/settings.xml
-
-        mkdir ~/.gnupg
-        echo "" > ~/.gnupg/secring.gpg
-        echo "$SECRING_BASE64" | base64 --decode >> ~/.gnupg/secring.gpg
-        ls -la ~/
-        ls -la ~/.gnupg/secring.gpg
-        cat  ~/.m2/settings.xml
-
     - name: Copy and Decode
       run: |
           echo $PWD
