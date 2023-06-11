@@ -1,4 +1,3 @@
-apply from: 'constants.gradle'
 
 // Library Version
 ext.releaseVersion = 'dev'
