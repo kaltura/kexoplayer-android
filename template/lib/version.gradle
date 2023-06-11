@@ -1,4 +1,18 @@
+apply from: 'constants.gradle'
 
-// Library Version
-ext.releaseVersion = 'dev'
+// Publish to Bintray
+try {
+    apply plugin: 'bintray-release'
 
+    publish {
+        artifactId = 'kexoplayer'
+        desc = 'Kaltura ExoPlayer Fork'
+        repoName = 'android'
+        userOrg = 'kaltura'
+        groupId = 'com.kaltura.playkit'
+        publishVersion = releaseVersion
+        autoPublish = true
+    }
+} catch (UnknownPluginException ignored) {
+    // Ignore - it's ok not to have this plugin - it's only used for bintray uploads.
+}
