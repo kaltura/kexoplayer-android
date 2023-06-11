@@ -13,33 +13,65 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: set up JDK 11
-      uses: actions/setup-java@v2
-      with:
-        java-version: '11'
-        distribution: 'adopt'
-        cache: gradle
+      - uses: actions/checkout@v2
+      - name: set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          cache: gradle
 
-    - name: Copy and Decode
-      run: |
-          echo $PWD
-          mkdir $PWD/.kltrenv && echo "${{ secrets.SIGNING_KEY }}" > $PWD/.kltrenv/secring.gpg.b64
-          base64 -d $PWD/.kltrenv/secring.gpg.b64 > $PWD/.kltrenv/secring.gpg  
+      - name: Maven preprocess
+        shell: bash
+        env:
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
+          SECRING_BASE64: ${{ secrets.SECRING_BASE64 }}
+          SIGNING_KEYID: ${{ secrets.SIGNING_KEY_ID }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          MAVEN_KEYID: ${{ secrets.MAVEN_KEYID }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+        run: |
+          
+          echo "<settings>" > ~/.m2/settings.xml
+          echo "<profiles>" >> ~/.m2/settings.xml
+          echo "<profile>" >> ~/.m2/settings.xml
+          echo "<id>gpg</id>" >> ~/.m2/settings.xml
+          echo "<properties>" >> ~/.m2/settings.xml
+          echo "<gpg.executable>gpg</gpg.executable>" >> ~/.m2/settings.xml
+          echo "<gpg.passphrase>"$GPG_PASSWORD"</gpg.passphrase>" >> ~/.m2/settings.xml
+          echo "</properties>" >> ~/.m2/settings.xml
+          echo "</profile>" >> ~/.m2/settings.xml
+          echo "</profiles>" >> ~/.m2/settings.xml
+          echo "<activeProfiles>" >> ~/.m2/settings.xml
+          echo "<activeProfile>gpg</activeProfile>" >> ~/.m2/settings.xml
+          echo "</activeProfiles>" >> ~/.m2/settings.xml
+          echo "<servers>" >> ~/.m2/settings.xml
+          echo "<server>" >> ~/.m2/settings.xml
+          echo "<id>ossrh</id>" >> ~/.m2/settings.xml
+          echo "<username>"$NEXUS_USERNAME"</username>" >> ~/.m2/settings.xml
+          echo "<password>"$NEXUS_PASSWORD"</password>" >> ~/.m2/settings.xml
+          echo "</server>" >> ~/.m2/settings.xml
+          echo "</servers>" >> ~/.m2/settings.xml
+          echo "<localRepository>/tmp/mvn</localRepository>" >> ~/.m2/settings.xml
+          echo "</settings>" >> ~/.m2/settings.xml
+          
+          mkdir ~/.gnupg
+          echo "" > ~/.gnupg/secring.gpg
+          echo "$SECRING_BASE64" | base64 --decode >> ~/.gnupg/secring.gpg
+          ls -la ~/
+          ls -la ~/.gnupg/secring.gpg
+          cat  ~/.m2/settings.xml
 
-    - name: Build dist
-      env:
-        VERSION: ${{ github.event.inputs.exoplayer_version }}
-        NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
-        NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
-        MAVEN_KEYID: ${{ secrets.MAVEN_KEYID }}
-        MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-        MAVEN_SECRING_PATH: ${{ secrets.MAVEN_SECRING_PATH }}
-        SIGNING_KEYID: ${{ secrets.SIGNING_KEY_ID }}
-        SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-
-      run: ./dist.sh $VERSION
-
-    - name: Delete secring file
-      run: |
-          rm -rf $PWD/.kltrenv
+      - name: Build dist
+        env:
+          VERSION: ${{ github.event.inputs.exoplayer_version }}
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          MAVEN_KEYID: ${{ secrets.MAVEN_KEYID }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          MAVEN_SECRING_PATH: ${{ secrets.MAVEN_SECRING_PATH }}
+          SIGNING_KEYID: ${{ secrets.SIGNING_KEY_ID }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: ./dist.sh $VERSION
