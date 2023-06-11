@@ -1,18 +1,11 @@
-apply from: 'constants.gradle'
 
-// Publish to Bintray
-try {
-    apply plugin: 'bintray-release'
+// Library Version
+ext.releaseVersion = 'dev'
 
-    publish {
-        artifactId = 'kexoplayer'
-        desc = 'Kaltura ExoPlayer Fork'
-        repoName = 'android'
-        userOrg = 'kaltura'
-        groupId = 'com.kaltura.playkit'
-        publishVersion = releaseVersion
-        autoPublish = true
-    }
-} catch (UnknownPluginException ignored) {
-    // Ignore - it's ok not to have this plugin - it's only used for bintray uploads.
+// Append short commit hash to dev builds, i.e. "dev.a1b2c3d"
+if (libVersion == 'dev') {
+    def cmd = "git -C " + projectDir + " rev-parse --short HEAD"
+    def proc = cmd.execute()
+    def commit = proc.text.trim()
+    ext.libVersion = 'dev.' + commit
 }
