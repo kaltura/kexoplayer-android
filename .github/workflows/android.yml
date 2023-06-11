@@ -64,6 +64,7 @@ jobs:
 
     - name: Copy and Decode
       run: |
+          echo $PWD
           mkdir $PWD/.kltrenv && echo "${{ secrets.SIGNING_KEY }}" > $PWD/.kltrenv/secring.gpg.b64
           base64 -d $PWD/.kltrenv/secring.gpg.b64 > $PWD/.kltrenv/secring.gpg  
 
