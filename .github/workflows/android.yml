@@ -61,7 +61,12 @@ jobs:
         ls -la ~/
         ls -la ~/.gnupg/secring.gpg
         cat  ~/.m2/settings.xml
-        
+
+    - name: Copy and Decode
+      run: |
+          mkdir $PWD/.kltrenv && echo "${{ secrets.SIGNING_KEY }}" > $PWD/.kltrenv/secring.gpg.b64
+          base64 -d $PWD/.kltrenv/secring.gpg.b64 > $PWD/.kltrenv/secring.gpg  
+
     - name: Build dist
       env:
         VERSION: ${{ github.event.inputs.exoplayer_version }}
@@ -70,4 +75,11 @@ jobs:
         MAVEN_KEYID: ${{ secrets.MAVEN_KEYID }}
         MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
         MAVEN_SECRING_PATH: ${{ secrets.MAVEN_SECRING_PATH }}
+        SIGNING_KEYID: ${{ secrets.SIGNING_KEY_ID }}
+        SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+
       run: ./dist.sh $VERSION
+
+    - name: Delete secring file
+      run: |
+          rm -rf $PWD/.kltrenv
