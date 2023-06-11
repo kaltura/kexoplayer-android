@@ -56,8 +56,5 @@ dependencies {
     compileOnly 'org.jetbrains.kotlin:kotlin-annotations-jvm:' + kotlinAnnotationsVersion
 }
 
-if (hasProperty('VERSION_NAME')) {
-    apply from: './gradle-mvn-push.gradle'
-} else {
-    apply from: './gradle-mvn-local.gradle'
-} 
+apply from: './gradle-mvn-push.gradle'
+
