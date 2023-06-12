@@ -28,10 +28,6 @@ jobs:
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
           SECRING_BASE64: ${{ secrets.SECRING_BASE64 }}
-          SIGNING_KEYID: ${{ secrets.SIGNING_KEY_ID }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-          MAVEN_KEYID: ${{ secrets.MAVEN_KEYID }}
-          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
         run: |
           
           echo "<settings>" > ~/.m2/settings.xml
@@ -72,6 +68,4 @@ jobs:
           MAVEN_KEYID: ${{ secrets.MAVEN_KEYID }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
           MAVEN_SECRING_PATH: ${{ secrets.MAVEN_SECRING_PATH }}
-          SIGNING_KEYID: ${{ secrets.SIGNING_KEY_ID }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: ./dist.sh $VERSION
