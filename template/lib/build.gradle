@@ -38,7 +38,7 @@ dependencies {
     
     api "com.squareup.okhttp3:okhttp:4.9.2"
     implementation 'androidx.recyclerview:recyclerview:' + androidxRecyclerViewVersion
-    implementation 'androidx.media:media:1.4.3'
+    implementation 'androidx.media:media:1.6.0'
     implementation 'androidx.core:core:1.7.0'
     implementation 'androidx.annotation:annotation:' + androidxAnnotationVersion
     implementation ('com.google.guava:guava:' + guavaVersion) {
