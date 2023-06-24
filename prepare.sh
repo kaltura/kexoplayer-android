@@ -23,11 +23,11 @@ cp -R "$INPUT_DIR/libraries/exoplayer/src/main/java/androidx/media3/exoplayer" "
 cp -R "$INPUT_DIR/libraries/common/src/main/java/androidx/media3/common" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3"
 
 # Core
-cp -R "$INPUT_DIR/libraries/extractor/src/main/java/androidx/media3/extractor" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3/extractor"
+cp -R "$INPUT_DIR/libraries/extractor/src/main/java/androidx/media3/extractor" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3"
 
 # DASH and HLS sources
-cp -R "$INPUT_DIR/libraries/exoplayer_dash/src/main/java/androidx/media3/exoplayer/dash" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3/source/dash"
-cp -R "$INPUT_DIR/libraries/exoplayer_hls/src/main/java/androidx/media3/exoplayer/hls" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3/source/hls"
+cp -R "$INPUT_DIR/libraries/exoplayer_dash/src/main/java/androidx/media3/exoplayer/dash" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3/exoplayer/dash"
+cp -R "$INPUT_DIR/libraries/exoplayer_hls/src/main/java/androidx/media3/exoplayer/hls" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3/exoplayer/hls"
 
 # UI Java files
 cp -R "$INPUT_DIR/libraries/ui/src/main/java/androidx/media3/ui" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3"
@@ -66,7 +66,7 @@ cp -R "$INPUT_DIR/libraries/datasource_okhttp/src/main/java/androidx/media3/data
 # Find com.google.android.exoplayer2 in source code and replace to com.kaltura.android.exoplayer2
 find "./$OUTPUT_DIR/lib/src/main" -type f \( -name "*.gradle" -o  -name "*.md" -o -name "*.xml" -o -name "*.txt" -o -name "*.json" -o -name "*.java" \) -exec perl -i -p -e 's/androidx.media3/com.kaltura.androidx.media3/' '{}' ';'
 # Add R import to UI source files
-find "./$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3/ui" -type f -name "*.java" -exec perl -i -p -e 's/package com\.kaltura\.androidx\.media3\.ui;/package com.kaltura.androidx.media3.ui;\n\nimport com.kaltura.androix.media3.R;/' {} \;
+find "./$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3/ui" -type f -name "*.java" -exec perl -i -p -e 's/package com\.kaltura\.androidx\.media3\.ui;/package com.kaltura.androidx.media3.ui;\n\nimport com.kaltura.androidx.media3.R;/' {} \;
 
 # Rename ids exo->kexo
 find . -type f -name "*.xml"  -exec perl -i -p -e 's/\@id\/exo_/\@id\/kexo_/' {} \;
