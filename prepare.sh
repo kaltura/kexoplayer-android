@@ -41,11 +41,10 @@ cp -R "$INPUT_DIR/libraries/decoder/src/main/java/androidx/media3/decoder" "$OUT
 # DATABASE Java files
 cp -R "$INPUT_DIR/libraries/database/src/main/java/androidx/media3/database" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3"
 
-sed '/core.R;$/d' $OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3/exoplayer/offline/DownloadNotificationHelper.java > /tmp/DownloadNotificationHelper.java
-mv /tmp/DownloadNotificationHelper.java $OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3/exoplayer/offline/DownloadNotificationHelper.java
+sed -i'' -e  's/androidx\.media3\.exoplayer\.R/androidx\.media3\.R/' $OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3/exoplayer/offline/DownloadNotificationHelper.java
 
 # UI res files
-cp -R "$INPUT_DIR/libraries/ui/src/main/res/" "$OUTPUT_DIR/lib/src/main"
+cp -R "$INPUT_DIR/libraries/ui/src/main/res/" "$OUTPUT_DIR/lib/src/main/res"
 
 cp $INPUT_DIR/libraries/exoplayer/src/main/res/values/strings.xml /tmp/kexo_core_strings.xml
 
@@ -57,7 +56,7 @@ cat /tmp/kexo_core_strings.xml | grep "name=" >> /tmp/kexo_strings.xml
 echo "</resources>" >> /tmp/kexo_strings.xml
 rm /tmp/kexo_core_strings.xml
 
-mv /tmp/kexo_strings.xml ./$OUTPUT_DIR/lib/src/main/values/strings.xml
+mv /tmp/kexo_strings.xml ./$OUTPUT_DIR/lib/src/main/res/values/strings.xml
 
 # OkHttp extension
 mkdir "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3/ext"

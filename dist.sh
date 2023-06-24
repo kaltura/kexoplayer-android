@@ -21,6 +21,5 @@ $MYDIR/prepare.sh "media-$VERSION" dist
 ## Step 3: Build
 ## Step 4: Push to Maven Central
 cd dist
-./gradlew --no-daemon build
-#./gradlew --no-daemon build publish
+./gradlew --no-daemon build publish
 #./gradlew build uploadArchives
