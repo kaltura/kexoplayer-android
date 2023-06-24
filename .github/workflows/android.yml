@@ -1,10 +1,10 @@
-name: Android CI
+name: Android Media3 KExo CI
 
 on:
   workflow_dispatch:
     inputs:
       exoplayer_version:
-        default: 2.18.x
+        default: 1.x.x
         required: true
 
 jobs:
