@@ -3,7 +3,7 @@ name: Android Media3 KExo CI
 on:
   workflow_dispatch:
     inputs:
-      exoplayer_version:
+      media3_exoplayer_version:
         default: 1.x.x
         required: true
 
