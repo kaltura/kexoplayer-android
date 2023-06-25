@@ -28,7 +28,7 @@ jobs:
 
       - name: Build dist
         env:
-          VERSION: ${{ github.event.inputs.exoplayer_version }}
+          VERSION: ${{ github.event.inputs.media3_exoplayer_version }}
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           MAVEN_KEYID: ${{ secrets.MAVEN_KEYID }}
