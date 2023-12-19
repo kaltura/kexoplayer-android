@@ -24,6 +24,7 @@ cp -R "$INPUT_DIR/libraries/common/src/main/java/androidx/media3/common" "$OUTPU
 
 # Core
 cp -R "$INPUT_DIR/libraries/extractor/src/main/java/androidx/media3/extractor" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3"
+cp -R "$INPUT_DIR/libraries/container/src/main/java/androidx/media3/container" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3"
 
 # DASH and HLS sources
 cp -R "$INPUT_DIR/libraries/exoplayer_dash/src/main/java/androidx/media3/exoplayer/dash" "$OUTPUT_DIR/lib/src/main/java/com/kaltura/androidx/media3/exoplayer/dash"

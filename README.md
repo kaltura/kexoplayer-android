@@ -3,12 +3,11 @@ ExoPlayer in com.kaltura namespace
 
 # Build Steps
 
-## Step 1: Download ExoPlayer
+## Step 1: Download and unpack Media3 ExoPlayer
 
-	$ curl https://github.com/google/ExoPlayer/archive/r$VERSION.tar.gz > exoplayer.tgz
-	$ tar -xzf exoplayer.tgz
+	$ curl -L https://github.com/androidx/media/archive/$VERSION.tar.gz | tar -xz
 	
-This will create a directory ExoPlayer-rVERSION.
+This will create a directory media-rVERSION.
 
 ## Step 2: Prepare the sources
 
