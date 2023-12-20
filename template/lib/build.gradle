@@ -41,10 +41,11 @@ dependencies {
     implementation 'androidx.media:media:1.6.0'
     implementation 'androidx.core:core:1.7.0'
     implementation 'androidx.annotation:annotation:' + androidxAnnotationVersion
+    implementation 'androidx.exifinterface:exifinterface:' + androidxExifInterfaceVersion
     implementation ('com.google.guava:guava:' + guavaVersion) {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'org.checkerframework', module: 'checker-qual'
-        exclude group: 'org.checkerframework', module: 'checker-compat-qual'
+        exclude group: 'org.checkerframework', module: 'checker-qual'
         exclude group: 'com.google.errorprone', module: 'error_prone_annotations'
         exclude group: 'com.google.j2objc', module: 'j2objc-annotations'
         exclude group: 'org.codehaus.mojo', module: 'animal-sniffer-annotations'
@@ -52,7 +53,7 @@ dependencies {
     compileOnly 'com.google.errorprone:error_prone_annotations:' + errorProneVersion 
     compileOnly 'com.google.code.findbugs:jsr305:' + jsr305Version
     compileOnly 'org.checkerframework:checker-qual:' + checkerframeworkVersion
-    compileOnly 'org.checkerframework:checker-compat-qual:' + checkerframeworkCompatVersion 
+    compileOnly 'org.checkerframework:checker-qual:' + checkerframeworkVersion 
     compileOnly 'org.jetbrains.kotlin:kotlin-annotations-jvm:' + kotlinAnnotationsVersion
 }
 
