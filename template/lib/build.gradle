@@ -3,6 +3,7 @@ apply from: 'version.gradle'
 apply from: 'constants.gradle'
 
 android {
+    namespace 'com.kaltura.androidx.media3'
     compileSdkVersion project.ext.compileSdkVersion
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -26,6 +27,12 @@ android {
 
     lintOptions {
          abortOnError false
+    }
+    publishing {
+        publishing {
+            singleVariant('release') {
+            }
+        }
     }
 }
 

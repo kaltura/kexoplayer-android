@@ -15,7 +15,7 @@ This will create a directory media-rVERSION.
 	
 ## Step 3: Build
 
-	$ ./gradlew publishReleasePublicationToMavenLocal
+	$ ./gradlew publishToMavenLocal
 
 ## Step 4: Push to Bintray
 	
