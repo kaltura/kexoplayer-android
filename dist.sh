@@ -11,13 +11,15 @@ WORK_DIR="$MYDIR/work"
 mkdir "$WORK_DIR"
 cd "$WORK_DIR"
 
-## Step 1: Download ExoPlayer
-curl -L https://github.com/google/ExoPlayer/archive/r$VERSION.tar.gz | tar -xz
+## Step 1: Download media3 ExoPlayer
+curl -L https://github.com/androidx/media/archive/$VERSION.tar.gz | tar -xz
+
 
 ## Step 2: Prepare the sources
-$MYDIR/prepare.sh "ExoPlayer-r$VERSION" dist
+$MYDIR/prepare.sh "media-$VERSION" dist
 	
 ## Step 3: Build
 ## Step 4: Push to Maven Central
 cd dist
-./gradlew build uploadArchives
+./gradlew --no-daemon build publish
+#./gradlew build uploadArchives

@@ -3,6 +3,7 @@ apply from: 'version.gradle'
 apply from: 'constants.gradle'
 
 android {
+    namespace 'com.kaltura.androidx.media3'
     compileSdkVersion project.ext.compileSdkVersion
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -25,7 +26,13 @@ android {
     }
 
     lintOptions {
-        lintConfig file("lint.xml")
+         abortOnError false
+    }
+    publishing {
+        publishing {
+            singleVariant('release') {
+            }
+        }
     }
 }
 
@@ -36,24 +43,29 @@ tasks.withType(Javadoc) {
 dependencies {
     implementation 'org.jetbrains:annotations:15.0'
     
-    api "com.squareup.okhttp3:okhttp:3.12.11"
+    api "com.squareup.okhttp3:okhttp:4.9.2"
     implementation 'androidx.recyclerview:recyclerview:' + androidxRecyclerViewVersion
-    implementation 'androidx.media:media:1.2.1'
-    implementation 'androidx.core:core:1.1.0'
+    implementation 'androidx.media:media:1.6.0'
+    implementation 'androidx.core:core:1.7.0'
     implementation 'androidx.annotation:annotation:' + androidxAnnotationVersion
+    implementation 'androidx.exifinterface:exifinterface:' + androidxExifInterfaceVersion
     implementation ('com.google.guava:guava:' + guavaVersion) {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
-        exclude group: 'org.checkerframework', module: 'checker-compat-qual'
+        exclude group: 'org.checkerframework', module: 'checker-qual'
+        exclude group: 'org.checkerframework', module: 'checker-qual'
         exclude group: 'com.google.errorprone', module: 'error_prone_annotations'
         exclude group: 'com.google.j2objc', module: 'j2objc-annotations'
         exclude group: 'org.codehaus.mojo', module: 'animal-sniffer-annotations'
     }
+    compileOnly 'com.google.errorprone:error_prone_annotations:' + errorProneVersion 
     compileOnly 'com.google.code.findbugs:jsr305:' + jsr305Version
     compileOnly 'org.checkerframework:checker-qual:' + checkerframeworkVersion
-    compileOnly 'org.checkerframework:checker-compat-qual:' + checkerframeworkCompatVersion 
+    compileOnly 'org.checkerframework:checker-qual:' + checkerframeworkVersion 
     compileOnly 'org.jetbrains.kotlin:kotlin-annotations-jvm:' + kotlinAnnotationsVersion
 }
 
 if (hasProperty('VERSION_NAME')) {
     apply from: './gradle-mvn-push.gradle'
-}
+} else {
+    apply from: './gradle-mvn-local.gradle'
+} 

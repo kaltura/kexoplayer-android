@@ -1,0 +1,42 @@
+name: Android Media3 KExo CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      media3_exoplayer_version:
+        default: 1.x.x
+        required: true
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: set up JDK 17
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+          cache: gradle
+
+      - name: Maven preprocess
+        run: |
+            mkdir $PWD/.kltrenv && echo "${{ secrets.SIGNING_KEY }}" > $PWD/.kltrenv/secring.gpg.b64
+            base64 -d $PWD/.kltrenv/secring.gpg.b64 > $PWD/.kltrenv/secring.gpg
+
+      - name: Build dist
+        env:
+          VERSION: ${{ github.event.inputs.media3_exoplayer_version }}
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          MAVEN_KEYID: ${{ secrets.MAVEN_KEYID }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          MAVEN_SECRING_PATH: ${{ secrets.MAVEN_SECRING_PATH }}
+
+        run: ./dist.sh $VERSION
+
+      - name: Delete secring file
+        run: |
+            rm -rf $PWD/.kltrenv
